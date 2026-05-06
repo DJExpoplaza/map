@@ -1,62 +1,93 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>좌표 수집 도구 (Calibration)</title>
+    <style>
+        body { 
+            margin: 0; 
+            padding: 0; 
+            background-color: #222; 
+            display: flex; 
+            flex-direction: column;
+            align-items: center;
+        }
+        .map-container { 
+            position: relative; 
+            width: 100%; 
+            max-width: 800px; 
+        }
+        .map-image { 
+            width: 100%; 
+            display: block; 
+            cursor: crosshair; /* 마우스 포인터를 십자선으로 변경 */
+        }
+        /* 터치한 곳에 임시로 찍힐 파란색 점 */
+        .click-dot {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background-color: #007bff;
+            border: 2px solid white;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            display: none;
+            pointer-events: none; /* 점이 클릭을 방해하지 않도록 함 */
+        }
+        /* 좌표 결과를 보여줄 하단 박스 */
+        .result-box {
+            position: fixed;
+            bottom: 20px;
+            background-color: rgba(0, 0, 0, 0.8);
+            color: #00ff00;
+            padding: 15px 20px;
+            border-radius: 8px;
+            font-size: 18px;
+            font-family: monospace;
+            text-align: center;
+            border: 1px solid #555;
+            z-index: 100;
+        }
+    </style>
+</head>
+<body>
+
+<div class="map-container">
+    <img src="map.jpg" class="map-image" id="target-map" alt="조감도">
+    <div id="dot" class="click-dot"></div>
+</div>
+
+<div class="result-box" id="result">
+    이미지의 특정 지점을<br>터치해 주세요.
+</div>
+
 <script>
-(function() {
-    const corners = {
-        nw: { lat: 36.371818, lng: 127.382459 },
-        ne: { lat: 36.371818, lng: 127.393943 },
-        se: { lat: 36.364615, lng: 127.393943 },
-        sw: { lat: 36.364615, lng: 127.382459 }
-    };
-    const marker = document.getElementById('my-location');
+    const mapImg = document.getElementById('target-map');
+    const resultBox = document.getElementById('result');
+    const dot = document.getElementById('dot');
 
-    function calculatePosition(currentLat, currentLng) {
-        const minLng = Math.min(corners.nw.lng, corners.sw.lng);
-        const maxLng = Math.max(corners.ne.lng, corners.se.lng);
-        const minLat = Math.min(corners.se.lat, corners.sw.lat);
-        const maxLat = Math.max(corners.nw.lat, corners.ne.lat);
-
-        if(currentLng < minLng || currentLng > maxLng || currentLat < minLat || currentLat > maxLat) return null; 
-
-        const xRatio = (currentLng - minLng) / (maxLng - minLng);
-        let yRatio = (maxLat - currentLat) / (maxLat - minLat);
-
-        // 원근감 조절용 커브값 (평면 지도는 1.0)
-        // 오차 데이터를 확인하신 후 이 값을 1.0부터 천천히 조절하시면 됩니다.
-        const yCurve = 1.0; 
-        yRatio = Math.pow(yRatio, yCurve);
-
-        const finalX = xRatio * 100;
-        const finalY = yRatio * 100;
-
-        return { x: finalX, y: finalY };
-    }
-
-    if (navigator.geolocation) {
-        navigator.geolocation.watchPosition(
-            function(position) {
-                const mapPos = calculatePosition(position.coords.latitude, position.coords.longitude);
-                if (mapPos) {
-                    marker.style.left = mapPos.x + '%';
-                    marker.style.top = mapPos.y + '%';
-                    marker.style.display = 'block';
-                } else {
-                    marker.style.display = 'none'; 
-                }
-            },
-            function(error) { console.log("위치 추적 실패: ", error); },
-            { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 }
-        );
-    }
-
-    // ▼▼▼ 화면 클릭 시 X, Y(%) 좌표를 알려주는 디버깅 도구 ▼▼▼
-    document.querySelector('.map-image').addEventListener('click', function(e) {
+    mapImg.addEventListener('click', function(e) {
+        // 이미지가 화면에서 차지하는 크기와 위치 정보 가져오기
         const rect = e.target.getBoundingClientRect();
-        // 이미지 내부에서 클릭한 위치의 픽셀 좌표를 구한 뒤, 전체 너비/높이에 대한 백분율(%)로 변환
-        const xPos = ((e.clientX - rect.left) / rect.width) * 100;
-        const yPos = ((e.clientY - rect.top) / rect.height) * 100;
         
-        // 화면에 알림창 띄우기
-        alert(`📍 화면 클릭 좌표\nX: ${xPos.toFixed(2)}%\nY: ${yPos.toFixed(2)}%`);
-    });
+        // 터치한 위치의 정확한 X, Y 픽셀 계산
+        const xPos = e.clientX - rect.left;
+        const yPos = e.clientY - rect.top;
 
-})();
+        // 전체 이미지 크기 대비 퍼센트(%)로 변환
+        const xPercent = (xPos / rect.width) * 100;
+        const yPercent = (yPos / rect.height) * 100;
+
+        // 화면 하단 박스에 좌표 텍스트 출력
+        resultBox.innerHTML = `📍 좌표 확인<br>X: <span style="color:white">${xPercent.toFixed(2)}%</span><br>Y: <span style="color:white">${yPercent.toFixed(2)}%</span>`;
+
+        // 터치한 곳에 파란색 점 표시하기
+        dot.style.left = xPercent + '%';
+        dot.style.top = yPercent + '%';
+        dot.style.display = 'block';
+    });
 </script>
+
+</body>
+</html>
