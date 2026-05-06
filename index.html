@@ -85,8 +85,8 @@
         const C = pts[bestTriangle[2]];
 
         // 🎯 찾아내신 영점 보정값 적용 완료!
-        const offsetX = 7.78;  
-        const offsetY = 1.28;  
+        const offsetX = 5.78;  
+        const offsetY = 2.28;  
 
         // 원근감이 적용된 좌표에 전체 영점 보정값을 밀어넣습니다.
         const finalX = (bestWeights.w1 * A.x + bestWeights.w2 * B.x + bestWeights.w3 * C.x) + offsetX;
