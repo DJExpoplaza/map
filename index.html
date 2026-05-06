@@ -7,7 +7,7 @@
     <style>
         body { margin: 0; padding: 0; background-color: #1a1a1a; display: flex; justify-content: center; }
         .map-container { position: relative; width: 100%; max-width: 800px; overflow: hidden; }
-        .map-image { width: 100%; display: block; }
+        .map-image { width: 100%; display: block; cursor: crosshair; }
         
         #my-location {
             position: absolute; 
@@ -21,35 +21,33 @@
             transition: left 0.5s ease-out, top 0.5s ease-out; 
         }
 
-        /* 🎯 실시간 좌표를 보여줄 디버깅 패널 */
+        /* 🎯 터치한 곳에 찍힐 임시 목표점 */
+        #target-dot {
+            position: absolute; width: 12px; height: 12px;
+            background-color: #007bff; border: 2px solid white; border-radius: 50%;
+            transform: translate(-50%, -50%);
+            display: none; z-index: 9; pointer-events: none;
+        }
+
+        /* 🎯 실시간 좌표 및 오차 계산 패널 */
         #debug-panel {
-            position: fixed;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background-color: rgba(0, 0, 0, 0.8);
-            color: #00ff00;
-            padding: 10px 15px;
-            border-radius: 8px;
-            font-size: 14px;
-            font-family: monospace;
-            text-align: center;
-            border: 1px solid #555;
-            z-index: 100;
-            width: 80%;
-            pointer-events: none;
+            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+            background-color: rgba(0, 0, 0, 0.85); color: #ccc;
+            padding: 12px 15px; border-radius: 8px; font-size: 14px; font-family: monospace;
+            text-align: center; border: 1px solid #555; z-index: 100; width: 85%;
+            pointer-events: none; line-height: 1.5;
         }
     </style>
 </head>
 <body>
 
 <div class="map-container">
-    <img src="map.jpg" class="map-image" alt="시민광장 조감도">
+    <img src="map.jpg" class="map-image" alt="시민광장 조감도" id="map-img">
+    <div id="target-dot"></div>
     <div id="my-location"></div>
 </div>
 
-<!-- 실시간 데이터 출력 박스 -->
-<div id="debug-panel">위치 탐색 중...</div>
+<div id="debug-panel">GPS 위치를 찾는 중입니다...</div>
 
 <script>
 (function() {
@@ -61,12 +59,15 @@
         { lat: 36.367105, lng: 127.388022, x: 38.34, y: 64.60 }  // 4: 중앙
     ];
 
-    const triangles = [
-        [0, 1, 4], [1, 2, 4], [2, 3, 4], [3, 0, 4] 
-    ];
+    const triangles = [[0, 1, 4], [1, 2, 4], [2, 3, 4], [3, 0, 4]];
 
     const marker = document.getElementById('my-location');
     const debugPanel = document.getElementById('debug-panel');
+    const targetDot = document.getElementById('target-dot');
+    
+    // 현재 핀의 위치를 기억할 변수
+    let currentPinX = 0;
+    let currentPinY = 0;
 
     function getWeights(p, a, b, c) {
         const det = (b.lat - c.lat) * (a.lng - c.lng) + (c.lng - b.lng) * (a.lat - c.lat);
@@ -92,16 +93,11 @@
             if(w === null) continue;
 
             const minWeight = Math.min(w.w1, w.w2, w.w3);
-            
             if (minWeight >= -0.05) { 
-                bestTriangle = triangles[i];
-                bestWeights = w;
-                break;
+                bestTriangle = triangles[i]; bestWeights = w; break;
             }
             if (minWeight > maxMinWeight) {
-                maxMinWeight = minWeight;
-                bestTriangle = triangles[i];
-                bestWeights = w;
+                maxMinWeight = minWeight; bestTriangle = triangles[i]; bestWeights = w;
             }
         }
 
@@ -111,10 +107,9 @@
         const B = pts[bestTriangle[1]];
         const C = pts[bestTriangle[2]];
 
-        // ▼▼▼ 영점 조절 (오차 수정용) ▼▼▼
-        // 현장에서 아래 패널의 숫자를 보고 부족한 만큼 더하거나 빼주세요!
-        const offsetX = 0;  // 예: 오른쪽으로 30m 밀려면 3~5 사이 입력
-        const offsetY = 0;  // 예: 위로 5m 당기려면 -0.5~-1 사이 입력
+        // ▼▼▼ 여기에 최종 보정값을 적으시면 됩니다 ▼▼▼
+        const offsetX = 0;  
+        const offsetY = 0;  
 
         const finalX = (bestWeights.w1 * A.x + bestWeights.w2 * B.x + bestWeights.w3 * C.x) + offsetX;
         const finalY = (bestWeights.w1 * A.y + bestWeights.w2 * B.y + bestWeights.w3 * C.y) + offsetY;
@@ -122,32 +117,52 @@
         return { x: finalX, y: finalY };
     }
 
+    // GPS 위치 갱신
     if (navigator.geolocation) {
         navigator.geolocation.watchPosition(
             function(position) {
-                const lat = position.coords.latitude;
-                const lng = position.coords.longitude;
-                const mapPos = calculatePosition(lat, lng);
-                
+                const mapPos = calculatePosition(position.coords.latitude, position.coords.longitude);
                 if (mapPos) {
-                    marker.style.left = mapPos.x + '%';
-                    marker.style.top = mapPos.y + '%';
+                    currentPinX = mapPos.x;
+                    currentPinY = mapPos.y;
+                    marker.style.left = currentPinX + '%';
+                    marker.style.top = currentPinY + '%';
                     marker.style.display = 'block';
                     
-                    // 패널에 실시간 수치 업데이트
-                    debugPanel.innerHTML = `GPS: ${lat.toFixed(5)}, ${lng.toFixed(5)}<br>현재 핀 위치: X <span style="color:white">${mapPos.x.toFixed(2)}%</span> / Y <span style="color:white">${mapPos.y.toFixed(2)}%</span>`;
-                } else {
-                    marker.style.display = 'none'; 
-                    debugPanel.innerHTML = `지도 범위를 벗어났습니다.`;
+                    debugPanel.innerHTML = `GPS 핀: X ${currentPinX.toFixed(2)} / Y ${currentPinY.toFixed(2)}<br><span style="color:#00ff00;">💡 내가 서있는 위치를 지도에서 터치하세요!</span>`;
                 }
             },
-            function(error) { 
-                console.log("위치 권한 오류: ", error); 
-                debugPanel.innerHTML = `GPS 권한을 허용해 주세요.`;
-            },
+            function(error) { debugPanel.innerHTML = `GPS 권한을 허용해 주세요.`; },
             { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 }
         );
     }
+
+    // 화면 터치 시 목표 좌표 및 보정값 자동 계산
+    document.getElementById('map-img').addEventListener('click', function(e) {
+        if(currentPinX === 0 && currentPinY === 0) {
+            alert("아직 GPS 핀이 생성되지 않았습니다."); return;
+        }
+
+        const rect = e.target.getBoundingClientRect();
+        const targetX = ((e.clientX - rect.left) / rect.width) * 100;
+        const targetY = ((e.clientY - rect.top) / rect.height) * 100;
+
+        // 터치한 곳에 파란색 목표점 표시
+        targetDot.style.left = targetX + '%';
+        targetDot.style.top = targetY + '%';
+        targetDot.style.display = 'block';
+
+        // 오차 계산 (목표 위치 - 현재 핀 위치)
+        const diffX = targetX - currentPinX;
+        const diffY = targetY - currentPinY;
+
+        debugPanel.innerHTML = `
+            GPS 핀: X ${currentPinX.toFixed(2)} / Y ${currentPinY.toFixed(2)}<br>
+            터치한 곳: X ${targetX.toFixed(2)} / Y ${targetY.toFixed(2)}<br>
+            <span style="color:yellow;">추천 보정값: offsetX <strong style="color:white">${diffX.toFixed(2)}</strong> / offsetY <strong style="color:white">${diffY.toFixed(2)}</strong></span>
+        `;
+    });
+
 })();
 </script>
 
