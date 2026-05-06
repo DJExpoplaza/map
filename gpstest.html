@@ -3,188 +3,142 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>엑스포시민광장 안내도</title>
+    <title>엑스포시민광장 GPS 정밀 보정 시스템</title>
     <style>
-        body { margin: 0; padding: 0; background-color: #1a1a1a; display: flex; justify-content: center; }
-        .map-container { position: relative; width: 100%; max-width: 800px; overflow: hidden; }
-        .map-image { width: 100%; display: block; cursor: crosshair; }
+        body { margin: 0; padding: 20px; background-color: #1a1a1a; color: white; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; }
         
-        /* 📍 빨간색 핀 (내 현재 GPS 위치) */
+        /* 맵 컨테이너 */
+        .map-wrapper { position: relative; width: 100%; max-width: 1000px; border: 2px solid #444; cursor: crosshair; overflow: hidden; }
+        .map-image { width: 100%; display: block; -webkit-user-drag: none; }
+
+        /* 📍 내 실시간 위치 핀 */
         #my-location {
-            position: absolute; 
-            width: 28px; height: 28px; 
-            background-image: url('data:image/svg+xml;utf8,<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" fill="%23ff3b30" stroke="white" stroke-width="1.5"/></svg>'); 
-            background-repeat: no-repeat;
-            transform: translate(-50%, -100%); 
-            filter: drop-shadow(0 2px 3px rgba(0,0,0,0.5));
-            display: none; 
-            z-index: 10;
-            transition: left 0.5s ease-out, top 0.5s ease-out; 
+            position: absolute; width: 30px; height: 30px;
+            background-image: url('data:image/svg+xml;utf8,<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" fill="%2300ff00" stroke="black" stroke-width="1.5"/></svg>');
+            background-repeat: no-repeat; transform: translate(-50%, -100%);
+            display: none; z-index: 100; transition: all 0.5s ease;
         }
 
-        /* 📍 파란색 핀 (내가 화면에 터치한 목표 위치) */
-        #target-pin {
-            position: absolute; 
-            width: 28px; height: 28px; 
-            background-image: url('data:image/svg+xml;utf8,<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" fill="%23007bff" stroke="white" stroke-width="1.5"/></svg>'); 
-            background-repeat: no-repeat;
-            transform: translate(-50%, -100%); 
-            filter: drop-shadow(0 2px 3px rgba(0,0,0,0.5));
-            display: none; 
-            z-index: 9;
-            pointer-events: none; /* 파란 핀이 클릭을 방해하지 않도록 */
-        }
+        /* 십자 축 (클릭 시 노출) */
+        .axis { position: absolute; background-color: rgba(255, 255, 0, 0.6); pointer-events: none; display: none; z-index: 50; }
+        .axis-x { height: 1px; width: 100%; left: 0; }
+        .axis-y { width: 1px; height: 100%; top: 0; }
 
-        /* 🎯 실시간 좌표 및 오차 계산 패널 */
-        #debug-panel {
-            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
-            background-color: rgba(0, 0, 0, 0.85); color: #ccc;
-            padding: 12px 15px; border-radius: 8px; font-size: 14px; font-family: monospace;
-            text-align: center; border: 1px solid #555; z-index: 100; width: 85%;
-            pointer-events: none; line-height: 1.5;
-        }
-        
-        /* 패널 위아래 구분선 */
-        #calc-info {
-            margin-top: 8px;
-            border-top: 1px dashed #666;
-            padding-top: 8px;
-            display: none; /* 처음엔 숨겨둠 */
-        }
+        /* 보정 데이터 패널 */
+        .panel { width: 100%; max-width: 1000px; margin-top: 20px; background: #2a2a2a; padding: 15px; border-radius: 8px; font-size: 14px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { border: 1px solid #444; padding: 8px; text-align: center; }
+        th { background: #333; }
+        .debug-info { color: #00ff00; font-family: monospace; margin-top: 10px; background: #000; padding: 10px; }
     </style>
 </head>
 <body>
 
-<div class="map-container">
-    <img src="map.jpg" class="map-image" alt="시민광장 조감도" id="map-img">
-    <div id="target-pin"></div>
-    <div id="my-location"></div>
-</div>
+    <h3>📍 엑스포시민광장 수직 맵 좌표 보정</h3>
+    
+    <div class="map-wrapper" id="map-container">
+        <img src="map.jpg" class="map-image" id="map-img">
+        <div id="my-location"></div>
+        <div id="axis-x" class="axis axis-x"></div>
+        <div id="axis-y" class="axis axis-y"></div>
+    </div>
 
-<div id="debug-panel">
-    <div id="gps-info">GPS 위치를 찾는 중입니다...</div>
-    <div id="calc-info"></div>
-</div>
+    <div class="panel">
+        <strong>[보정 방법]</strong> 지도 위를 클릭하면 노란색 축이 나옵니다. 해당 위치의 실제 GPS 위도/경도를 입력해 주세요.
+        <table id="calib-table">
+            <thead>
+                <tr>
+                    <th>지점</th>
+                    <th>Map X (%)</th>
+                    <th>Map Y (%)</th>
+                    <th>Latitude</th>
+                    <th>Longitude</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+        <div id="status" class="debug-info">보정 데이터를 기다리는 중...</div>
+    </div>
 
 <script>
 (function() {
-    const pts = [
-        { lat: 36.370976, lng: 127.382749, x: 11.73, y: 25.38 }, // 0: 북서
-        { lat: 36.370474, lng: 127.393289, x: 85.66, y: 29.30 }, // 1: 북동
-        { lat: 36.364964, lng: 127.393495, x: 99.76, y: 96.14 }, // 2: 남동
-        { lat: 36.365037, lng: 127.382889, x: 0.92,  y: 94.46 }, // 3: 남서
-        { lat: 36.367105, lng: 127.388022, x: 38.34, y: 64.60 }  // 4: 중앙
-    ];
-
-    const triangles = [[0, 1, 4], [1, 2, 4], [2, 3, 4], [3, 0, 4]];
-
+    const container = document.getElementById('map-container');
+    const img = document.getElementById('map-img');
     const marker = document.getElementById('my-location');
-    const targetPin = document.getElementById('target-pin');
-    const gpsInfo = document.getElementById('gps-info');
-    const calcInfo = document.getElementById('calc-info');
-    
-    // 현재 핀의 위치를 기억할 변수
-    let currentPinX = 0;
-    let currentPinY = 0;
+    const axisX = document.getElementById('axis-x');
+    const axisY = document.getElementById('axis-y');
+    const tableBody = document.querySelector('#calib-table tbody');
+    const status = document.getElementById('status');
 
-    function getWeights(p, a, b, c) {
-        const det = (b.lat - c.lat) * (a.lng - c.lng) + (c.lng - b.lng) * (a.lat - c.lat);
-        if(det === 0) return null;
-        const w1 = ((b.lat - c.lat) * (p.lng - c.lng) + (c.lng - b.lng) * (p.lat - c.lat)) / det;
-        const w2 = ((c.lat - a.lat) * (p.lng - c.lng) + (a.lng - c.lng) * (p.lat - c.lat)) / det;
-        const w3 = 1 - w1 - w2;
-        return {w1, w2, w3};
-    }
+    let calibPoints = [];
 
-    function calculatePosition(currentLat, currentLng) {
-        const p = { lat: currentLat, lng: currentLng };
-        let bestTriangle = null;
-        let bestWeights = null;
-        let maxMinWeight = -Infinity;
+    // 1. 맵 클릭 이벤트 (축 표시 및 보정 데이터 수집)
+    container.addEventListener('click', function(e) {
+        const rect = img.getBoundingClientRect();
+        const xPercent = ((e.clientX - rect.left) / rect.width * 100).toFixed(2);
+        const yPercent = ((e.clientY - rect.top) / rect.height * 100).toFixed(2);
 
-        for (let i = 0; i < triangles.length; i++) {
-            const A = pts[triangles[i][0]];
-            const B = pts[triangles[i][1]];
-            const C = pts[triangles[i][2]];
-            
-            const w = getWeights(p, A, B, C);
-            if(w === null) continue;
+        // 축 위치 업데이트
+        axisX.style.top = yPercent + '%';
+        axisY.style.left = xPercent + '%';
+        axisX.style.display = 'block';
+        axisY.style.display = 'block';
 
-            const minWeight = Math.min(w.w1, w.w2, w.w3);
-            if (minWeight >= -0.05) { 
-                bestTriangle = triangles[i]; bestWeights = w; break;
-            }
-            if (minWeight > maxMinWeight) {
-                maxMinWeight = minWeight; bestTriangle = triangles[i]; bestWeights = w;
-            }
+        // GPS 입력 받기
+        const lat = prompt(`클릭 지점(${xPercent}%, ${yPercent}%)의 위도(Lat)를 입력하세요:`);
+        if (!lat) return;
+        const lng = prompt(`클릭 지점(${xPercent}%, ${yPercent}%)의 경도(Lng)를 입력하세요:`);
+        if (!lng) return;
+
+        const point = { x: parseFloat(xPercent), y: parseFloat(yPercent), lat: parseFloat(lat), lng: parseFloat(lng) };
+        calibPoints.push(point);
+        updateUI();
+    });
+
+    function updateUI() {
+        tableBody.innerHTML = '';
+        calibPoints.forEach((p, i) => {
+            tableBody.innerHTML += `<tr><td>${i+1}</td><td>${p.x}%</td><td>${p.y}%</td><td>${p.lat}</td><td>${p.lng}</td></tr>`;
+        });
+
+        if (calibPoints.length >= 2) {
+            status.innerHTML = "✅ 보정 준비 완료! 실시간 GPS가 지도 위에 표시됩니다.";
         }
-
-        if (!bestTriangle) return null;
-
-        const A = pts[bestTriangle[0]];
-        const B = pts[bestTriangle[1]];
-        const C = pts[bestTriangle[2]];
-
-        // ▼▼▼ 여기에 최종 보정값을 적으시면 됩니다 ▼▼▼
-        const offsetX = 0;  
-        const offsetY = 0;  
-
-        const finalX = (bestWeights.w1 * A.x + bestWeights.w2 * B.x + bestWeights.w3 * C.x) + offsetX;
-        const finalY = (bestWeights.w1 * A.y + bestWeights.w2 * B.y + bestWeights.w3 * C.y) + offsetY;
-
-        return { x: finalX, y: finalY };
     }
 
-    // GPS 위치 갱신
+    // 2. 좌표 변환 로직 (수직 맵 전용 선형 매핑)
+    function getMapPos(currentLat, currentLng) {
+        if (calibPoints.length < 2) return null;
+
+        // 가장 멀리 떨어진 두 점(첫 점과 마지막 점)을 기준으로 비례식 계산
+        const p1 = calibPoints[0];
+        const p2 = calibPoints[calibPoints.length - 1];
+
+        // 경도(Lng) -> X% 매핑
+        const x = p1.x + (currentLng - p1.lng) * (p2.x - p1.x) / (p2.lng - p1.lng);
+        // 위도(Lat) -> Y% 매핑
+        const y = p1.y + (currentLat - p1.lat) * (p2.y - p1.y) / (p2.lat - p1.lat);
+
+        return { x, y };
+    }
+
+    // 3. 실시간 GPS 추적
     if (navigator.geolocation) {
         navigator.geolocation.watchPosition(
-            function(position) {
-                const mapPos = calculatePosition(position.coords.latitude, position.coords.longitude);
+            function(pos) {
+                const mapPos = getMapPos(pos.coords.latitude, pos.coords.longitude);
                 if (mapPos) {
-                    currentPinX = mapPos.x;
-                    currentPinY = mapPos.y;
-                    marker.style.left = currentPinX + '%';
-                    marker.style.top = currentPinY + '%';
+                    marker.style.left = mapPos.x + '%';
+                    marker.style.top = mapPos.y + '%';
                     marker.style.display = 'block';
-                    
-                    // 위쪽 칸(GPS 정보)만 실시간 업데이트
-                    gpsInfo.innerHTML = `현재 핀: X ${currentPinX.toFixed(2)} / Y ${currentPinY.toFixed(2)}<br><span style="color:#00ff00;">💡 내가 서있는 위치를 지도에서 터치하세요!</span>`;
+                    console.log(`GPS: ${pos.coords.latitude}, ${pos.coords.longitude} -> Map: ${mapPos.x}%, ${mapPos.y}%`);
                 }
             },
-            function(error) { gpsInfo.innerHTML = `GPS 권한을 허용해 주세요.`; },
+            (err) => console.warn(err),
             { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 }
         );
     }
-
-    // 화면 터치 시 목표 좌표 및 보정값 자동 계산 (아래쪽 칸에 고정)
-    document.getElementById('map-img').addEventListener('click', function(e) {
-        if(currentPinX === 0 && currentPinY === 0) {
-            alert("아직 빨간색 GPS 핀이 화면에 나타나지 않았습니다. 잠시만 기다려주세요."); return;
-        }
-
-        const rect = e.target.getBoundingClientRect();
-        const targetX = ((e.clientX - rect.left) / rect.width) * 100;
-        const targetY = ((e.clientY - rect.top) / rect.height) * 100;
-
-        // 터치한 곳에 뾰족한 파란색 핀 표시
-        targetPin.style.left = targetX + '%';
-        targetPin.style.top = targetY + '%';
-        targetPin.style.display = 'block';
-
-        // 오차 계산 (목표 위치 - 현재 핀 위치)
-        const diffX = targetX - currentPinX;
-        const diffY = targetY - currentPinY;
-
-        // 아래쪽 칸(계산 정보)을 화면에 보이게 하고 값 고정
-        calcInfo.style.display = 'block';
-        calcInfo.innerHTML = `
-            터치한 곳(파란 핀): X ${targetX.toFixed(2)} / Y ${targetY.toFixed(2)}<br>
-            <span style="color:yellow; font-size:16px;">추천 보정값: offsetX <strong style="color:white">${diffX.toFixed(2)}</strong> / offsetY <strong style="color:white">${diffY.toFixed(2)}</strong></span>
-        `;
-    });
-
 })();
 </script>
-
 </body>
 </html>
