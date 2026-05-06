@@ -3,90 +3,128 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>좌표 수집 도구 (Calibration)</title>
+    <title>엑스포시민광장 안내도</title>
     <style>
-        body { 
-            margin: 0; 
-            padding: 0; 
-            background-color: #222; 
-            display: flex; 
-            flex-direction: column;
-            align-items: center;
-        }
-        .map-container { 
-            position: relative; 
-            width: 100%; 
-            max-width: 800px; 
-        }
-        .map-image { 
-            width: 100%; 
-            display: block; 
-            cursor: crosshair; /* 마우스 포인터를 십자선으로 변경 */
-        }
-        /* 터치한 곳에 임시로 찍힐 파란색 점 */
-        .click-dot {
-            position: absolute;
-            width: 10px;
-            height: 10px;
-            background-color: #007bff;
-            border: 2px solid white;
-            border-radius: 50%;
-            transform: translate(-50%, -50%);
-            display: none;
-            pointer-events: none; /* 점이 클릭을 방해하지 않도록 함 */
-        }
-        /* 좌표 결과를 보여줄 하단 박스 */
-        .result-box {
-            position: fixed;
-            bottom: 20px;
-            background-color: rgba(0, 0, 0, 0.8);
-            color: #00ff00;
-            padding: 15px 20px;
-            border-radius: 8px;
-            font-size: 18px;
-            font-family: monospace;
-            text-align: center;
-            border: 1px solid #555;
-            z-index: 100;
+        body { margin: 0; padding: 0; background-color: #1a1a1a; display: flex; justify-content: center; }
+        .map-container { position: relative; width: 100%; max-width: 800px; overflow: hidden; }
+        .map-image { width: 100%; display: block; }
+        
+        /* 현재 위치 핀 마커 */
+        #my-location {
+            position: absolute; 
+            width: 28px; height: 28px; 
+            background-image: url('data:image/svg+xml;utf8,<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" fill="%23ff3b30" stroke="white" stroke-width="1.5"/></svg>'); 
+            background-repeat: no-repeat;
+            transform: translate(-50%, -100%); 
+            filter: drop-shadow(0 2px 3px rgba(0,0,0,0.5));
+            display: none; 
+            z-index: 10;
+            transition: left 0.5s ease-out, top 0.5s ease-out; /* 걷는 방향으로 스르륵 부드럽게 이동 */
         }
     </style>
 </head>
 <body>
 
 <div class="map-container">
-    <img src="map.jpg" class="map-image" id="target-map" alt="조감도">
-    <div id="dot" class="click-dot"></div>
-</div>
-
-<div class="result-box" id="result">
-    이미지의 특정 지점을<br>터치해 주세요.
+    <img src="map.jpg" class="map-image" alt="시민광장 조감도">
+    <div id="my-location"></div>
 </div>
 
 <script>
-    const mapImg = document.getElementById('target-map');
-    const resultBox = document.getElementById('result');
-    const dot = document.getElementById('dot');
+(function() {
+    // 땀 흘려 수집하신 5개의 정밀 기준점 데이터
+    const pts = [
+        { lat: 36.370976, lng: 127.382749, x: 11.73, y: 25.38 }, // 0: 북서 (교회)
+        { lat: 36.370474, lng: 127.393289, x: 85.66, y: 29.30 }, // 1: 북동 (수목원 뒷길)
+        { lat: 36.364964, lng: 127.393495, x: 99.76, y: 96.14 }, // 2: 남동 (평송)
+        { lat: 36.365037, lng: 127.382889, x: 0.92,  y: 94.46 }, // 3: 남서 (5번게이트)
+        { lat: 36.367105, lng: 127.388022, x: 38.34, y: 64.60 }  // 4: 중앙 (무대 끝)
+    ];
 
-    mapImg.addEventListener('click', function(e) {
-        // 이미지가 화면에서 차지하는 크기와 위치 정보 가져오기
-        const rect = e.target.getBoundingClientRect();
-        
-        // 터치한 위치의 정확한 X, Y 픽셀 계산
-        const xPos = e.clientX - rect.left;
-        const yPos = e.clientY - rect.top;
+    // 5개의 점을 이어 광장을 4개의 수학적 삼각형 구역으로 분할 (투시 왜곡 완벽 해결)
+    const triangles = [
+        [0, 1, 4], // 상단 구역
+        [1, 2, 4], // 우측 구역
+        [2, 3, 4], // 하단 구역
+        [3, 0, 4]  // 좌측 구역
+    ];
 
-        // 전체 이미지 크기 대비 퍼센트(%)로 변환
-        const xPercent = (xPos / rect.width) * 100;
-        const yPercent = (yPos / rect.height) * 100;
+    const marker = document.getElementById('my-location');
 
-        // 화면 하단 박스에 좌표 텍스트 출력
-        resultBox.innerHTML = `📍 좌표 확인<br>X: <span style="color:white">${xPercent.toFixed(2)}%</span><br>Y: <span style="color:white">${yPercent.toFixed(2)}%</span>`;
+    // 무게중심 좌표계(Barycentric coordinates) 알고리즘
+    function getWeights(p, a, b, c) {
+        const det = (b.lat - c.lat) * (a.lng - c.lng) + (c.lng - b.lng) * (a.lat - c.lat);
+        if(det === 0) return null;
+        const w1 = ((b.lat - c.lat) * (p.lng - c.lng) + (c.lng - b.lng) * (p.lat - c.lat)) / det;
+        const w2 = ((c.lat - a.lat) * (p.lng - c.lng) + (a.lng - c.lng) * (p.lat - c.lat)) / det;
+        const w3 = 1 - w1 - w2;
+        return {w1, w2, w3};
+    }
 
-        // 터치한 곳에 파란색 점 표시하기
-        dot.style.left = xPercent + '%';
-        dot.style.top = yPercent + '%';
-        dot.style.display = 'block';
-    });
+    function calculatePosition(currentLat, currentLng) {
+        const p = { lat: currentLat, lng: currentLng };
+        let bestTriangle = null;
+        let bestWeights = null;
+        let maxMinWeight = -Infinity;
+
+        // 현재 위치가 어느 구역(삼각형)에 속하는지 계산
+        for (let i = 0; i < triangles.length; i++) {
+            const A = pts[triangles[i][0]];
+            const B = pts[triangles[i][1]];
+            const C = pts[triangles[i][2]];
+            
+            const w = getWeights(p, A, B, C);
+            if(w === null) continue;
+
+            const minWeight = Math.min(w.w1, w.w2, w.w3);
+            
+            // 현재 위치가 이 삼각형 내부라면 즉시 채택 (-0.05는 GPS 미세 오차 허용 범위)
+            if (minWeight >= -0.05) { 
+                bestTriangle = triangles[i];
+                bestWeights = w;
+                break;
+            }
+
+            // 구역을 살짝 벗어났을 경우를 대비해 가장 가까운 구역을 기억
+            if (minWeight > maxMinWeight) {
+                maxMinWeight = minWeight;
+                bestTriangle = triangles[i];
+                bestWeights = w;
+            }
+        }
+
+        if (!bestTriangle) return null;
+
+        // 채택된 구역의 기준점과 비율을 곱하여 최종 화면 X, Y(%) 도출
+        const A = pts[bestTriangle[0]];
+        const B = pts[bestTriangle[1]];
+        const C = pts[bestTriangle[2]];
+
+        const finalX = bestWeights.w1 * A.x + bestWeights.w2 * B.x + bestWeights.w3 * C.x;
+        const finalY = bestWeights.w1 * A.y + bestWeights.w2 * B.y + bestWeights.w3 * C.y;
+
+        return { x: finalX, y: finalY };
+    }
+
+    if (navigator.geolocation) {
+        navigator.geolocation.watchPosition(
+            function(position) {
+                // 스마트폰 GPS 호출
+                const mapPos = calculatePosition(position.coords.latitude, position.coords.longitude);
+                
+                if (mapPos) {
+                    marker.style.left = mapPos.x + '%';
+                    marker.style.top = mapPos.y + '%';
+                    marker.style.display = 'block';
+                } else {
+                    marker.style.display = 'none'; 
+                }
+            },
+            function(error) { console.log("위치 권한 오류: ", error); },
+            { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 }
+        );
+    }
+})();
 </script>
 
 </body>
