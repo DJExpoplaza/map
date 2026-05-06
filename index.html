@@ -9,7 +9,6 @@
         .map-container { position: relative; width: 100%; max-width: 800px; overflow: hidden; }
         .map-image { width: 100%; display: block; }
         
-        /* 현재 위치 핀 마커 */
         #my-location {
             position: absolute; 
             width: 28px; height: 28px; 
@@ -19,7 +18,26 @@
             filter: drop-shadow(0 2px 3px rgba(0,0,0,0.5));
             display: none; 
             z-index: 10;
-            transition: left 0.5s ease-out, top 0.5s ease-out; /* 걷는 방향으로 스르륵 부드럽게 이동 */
+            transition: left 0.5s ease-out, top 0.5s ease-out; 
+        }
+
+        /* 🎯 실시간 좌표를 보여줄 디버깅 패널 */
+        #debug-panel {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(0, 0, 0, 0.8);
+            color: #00ff00;
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: monospace;
+            text-align: center;
+            border: 1px solid #555;
+            z-index: 100;
+            width: 80%;
+            pointer-events: none;
         }
     </style>
 </head>
@@ -30,28 +48,26 @@
     <div id="my-location"></div>
 </div>
 
+<!-- 실시간 데이터 출력 박스 -->
+<div id="debug-panel">위치 탐색 중...</div>
+
 <script>
 (function() {
-    // 땀 흘려 수집하신 5개의 정밀 기준점 데이터
     const pts = [
-        { lat: 36.370976, lng: 127.382749, x: 11.73, y: 25.38 }, // 0: 북서 (교회)
-        { lat: 36.370474, lng: 127.393289, x: 85.66, y: 29.30 }, // 1: 북동 (수목원 뒷길)
-        { lat: 36.364964, lng: 127.393495, x: 99.76, y: 96.14 }, // 2: 남동 (평송)
-        { lat: 36.365037, lng: 127.382889, x: 0.92,  y: 94.46 }, // 3: 남서 (5번게이트)
-        { lat: 36.367105, lng: 127.388022, x: 38.34, y: 64.60 }  // 4: 중앙 (무대 끝)
+        { lat: 36.370976, lng: 127.382749, x: 11.73, y: 25.38 }, // 0: 북서
+        { lat: 36.370474, lng: 127.393289, x: 85.66, y: 29.30 }, // 1: 북동
+        { lat: 36.364964, lng: 127.393495, x: 99.76, y: 96.14 }, // 2: 남동
+        { lat: 36.365037, lng: 127.382889, x: 0.92,  y: 94.46 }, // 3: 남서
+        { lat: 36.367105, lng: 127.388022, x: 38.34, y: 64.60 }  // 4: 중앙
     ];
 
-    // 5개의 점을 이어 광장을 4개의 수학적 삼각형 구역으로 분할 (투시 왜곡 완벽 해결)
     const triangles = [
-        [0, 1, 4], // 상단 구역
-        [1, 2, 4], // 우측 구역
-        [2, 3, 4], // 하단 구역
-        [3, 0, 4]  // 좌측 구역
+        [0, 1, 4], [1, 2, 4], [2, 3, 4], [3, 0, 4] 
     ];
 
     const marker = document.getElementById('my-location');
+    const debugPanel = document.getElementById('debug-panel');
 
-    // 무게중심 좌표계(Barycentric coordinates) 알고리즘
     function getWeights(p, a, b, c) {
         const det = (b.lat - c.lat) * (a.lng - c.lng) + (c.lng - b.lng) * (a.lat - c.lat);
         if(det === 0) return null;
@@ -67,7 +83,6 @@
         let bestWeights = null;
         let maxMinWeight = -Infinity;
 
-        // 현재 위치가 어느 구역(삼각형)에 속하는지 계산
         for (let i = 0; i < triangles.length; i++) {
             const A = pts[triangles[i][0]];
             const B = pts[triangles[i][1]];
@@ -78,14 +93,11 @@
 
             const minWeight = Math.min(w.w1, w.w2, w.w3);
             
-            // 현재 위치가 이 삼각형 내부라면 즉시 채택 (-0.05는 GPS 미세 오차 허용 범위)
             if (minWeight >= -0.05) { 
                 bestTriangle = triangles[i];
                 bestWeights = w;
                 break;
             }
-
-            // 구역을 살짝 벗어났을 경우를 대비해 가장 가까운 구역을 기억
             if (minWeight > maxMinWeight) {
                 maxMinWeight = minWeight;
                 bestTriangle = triangles[i];
@@ -95,13 +107,17 @@
 
         if (!bestTriangle) return null;
 
-        // 채택된 구역의 기준점과 비율을 곱하여 최종 화면 X, Y(%) 도출
         const A = pts[bestTriangle[0]];
         const B = pts[bestTriangle[1]];
         const C = pts[bestTriangle[2]];
 
-        const finalX = bestWeights.w1 * A.x + bestWeights.w2 * B.x + bestWeights.w3 * C.x;
-        const finalY = bestWeights.w1 * A.y + bestWeights.w2 * B.y + bestWeights.w3 * C.y;
+        // ▼▼▼ 영점 조절 (오차 수정용) ▼▼▼
+        // 현장에서 아래 패널의 숫자를 보고 부족한 만큼 더하거나 빼주세요!
+        const offsetX = 0;  // 예: 오른쪽으로 30m 밀려면 3~5 사이 입력
+        const offsetY = 0;  // 예: 위로 5m 당기려면 -0.5~-1 사이 입력
+
+        const finalX = (bestWeights.w1 * A.x + bestWeights.w2 * B.x + bestWeights.w3 * C.x) + offsetX;
+        const finalY = (bestWeights.w1 * A.y + bestWeights.w2 * B.y + bestWeights.w3 * C.y) + offsetY;
 
         return { x: finalX, y: finalY };
     }
@@ -109,18 +125,26 @@
     if (navigator.geolocation) {
         navigator.geolocation.watchPosition(
             function(position) {
-                // 스마트폰 GPS 호출
-                const mapPos = calculatePosition(position.coords.latitude, position.coords.longitude);
+                const lat = position.coords.latitude;
+                const lng = position.coords.longitude;
+                const mapPos = calculatePosition(lat, lng);
                 
                 if (mapPos) {
                     marker.style.left = mapPos.x + '%';
                     marker.style.top = mapPos.y + '%';
                     marker.style.display = 'block';
+                    
+                    // 패널에 실시간 수치 업데이트
+                    debugPanel.innerHTML = `GPS: ${lat.toFixed(5)}, ${lng.toFixed(5)}<br>현재 핀 위치: X <span style="color:white">${mapPos.x.toFixed(2)}%</span> / Y <span style="color:white">${mapPos.y.toFixed(2)}%</span>`;
                 } else {
                     marker.style.display = 'none'; 
+                    debugPanel.innerHTML = `지도 범위를 벗어났습니다.`;
                 }
             },
-            function(error) { console.log("위치 권한 오류: ", error); },
+            function(error) { 
+                console.log("위치 권한 오류: ", error); 
+                debugPanel.innerHTML = `GPS 권한을 허용해 주세요.`;
+            },
             { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 }
         );
     }
