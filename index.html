@@ -76,10 +76,10 @@
     let lastLng = null;
 
     const pts = [
-        { lat: 36.370976, lng: 127.382749, x: 3.27976,  y: 2.9653  },
-        { lat: 36.370474, lng: 127.393289, x: 95.1112,  y: 10.2056 },
-        { lat: 36.364964, lng: 127.393495, x: 96.0057,  y: 94.704  },
-        { lat: 36.365037, lng: 127.382889, x: 4.4723,   y: 94.2783 }
+        { lat: 36.370962, lng: 127.382746, x: 3.2797,  y: 2.7098  },
+        { lat: 36.370479, lng: 127.393333, x: 95.4094,  y: 10.3760 },
+        { lat: 36.365067, lng: 127.393368, x: 96.3038,  y: 94.2783 },
+        { lat: 36.365093, lng: 127.382920, x: 4.4723,   y: 94.2783 }
     ];
 
     const triangles = [[0, 1, 3], [1, 2, 3]];
@@ -122,8 +122,8 @@
         const B = pts[bestTriangle[1]];
         const C = pts[bestTriangle[2]];
 
-        const fixedOffsetX = 1.5;
-        const fixedOffsetY = 2.5;
+        const fixedOffsetX = 0;
+        const fixedOffsetY = 0;
 
         let finalX = (bestWeights.w1 * A.x + bestWeights.w2 * B.x + bestWeights.w3 * C.x) + fixedOffsetX;
         let finalY = (bestWeights.w1 * A.y + bestWeights.w2 * B.y + bestWeights.w3 * C.y) + fixedOffsetY;
