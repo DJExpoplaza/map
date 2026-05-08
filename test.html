@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>맵 좌표 확인 테스트</title>
+    <title>맵 좌표 확인 테스트 (마우스 추적형)</title>
     <style>
         body {
             font-family: sans-serif;
@@ -13,6 +13,7 @@
             display: flex;
             flex-direction: column;
             align-items: center;
+            overflow-x: hidden; /* 가로 스크롤 방지 */
         }
         #map-wrapper {
             position: relative;
@@ -26,53 +27,43 @@
             height: auto;
             -webkit-user-drag: none; /* 이미지 드래그 방지 */
         }
-        #result-panel {
-            margin-top: 20px;
-            padding: 15px;
-            background-color: #333;
-            border-radius: 8px;
-            font-size: 18px;
-            font-weight: bold;
+        
+        /* 마우스를 따라다닐 툴팁 스타일 */
+        #tooltip {
+            position: fixed; /* 브라우저 화면 기준으로 움직임 */
+            pointer-events: none; /* 마우스 클릭을 방해하지 않음 */
+            background-color: rgba(0, 0, 0, 0.85);
             color: #00ff00;
-            min-width: 300px;
-            text-align: center;
+            padding: 8px 12px;
+            border: 1px solid #444;
+            border-radius: 6px;
+            font-size: 15px;
+            font-family: monospace;
+            font-weight: bold;
+            display: none; /* 초기에는 숨김 */
+            z-index: 1000;
+            white-space: nowrap; /* 글자가 줄바꿈되지 않도록 설정 */
         }
     </style>
 </head>
 <body>
 
-    <h2>지도 좌표 추출기 (퍼센트)</h2>
-    <p>이미지를 클릭하면 해당 지점의 X, Y 좌표(%)가 표시됩니다.</p>
+    <h2>지도 좌표 추출기 (마우스 추적형)</h2>
+    <p>이미지 위에 마우스를 올리면 실시간으로 정밀 좌표(소수점 4자리)가 표시됩니다.</p>
 
     <div id="map-wrapper">
         <img src="map.jpg" id="map-img" alt="테스트 이미지">
     </div>
 
-    <div id="result-panel">
-        클릭 대기 중...
-    </div>
+    <div id="tooltip"></div>
 
     <script>
         const wrapper = document.getElementById('map-wrapper');
         const img = document.getElementById('map-img');
-        const resultPanel = document.getElementById('result-panel');
+        const tooltip = document.getElementById('tooltip');
 
-        wrapper.addEventListener('click', function(e) {
-            // 이미지의 화면상 크기와 위치 정보 가져오기
+        // 마우스가 이미지 위에서 움직일 때마다 실행
+        wrapper.addEventListener('mousemove', function(e) {
             const rect = img.getBoundingClientRect();
             
-            // 클릭한 위치의 이미지 내 픽셀 좌표 계산
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
-
-            // 전체 너비/높이 대비 퍼센트로 변환
-            const xPercent = (x / rect.width) * 100;
-            const yPercent = (y / rect.height) * 100;
-
-            // 소수점 2자리까지 잘라서 화면에 출력
-            resultPanel.innerText = `X: ${xPercent.toFixed(2)}%  /  Y: ${yPercent.toFixed(2)}%`;
-        });
-    </script>
-
-</body>
-</html>
+            //
