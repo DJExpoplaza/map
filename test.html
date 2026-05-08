@@ -2,138 +2,148 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GPS 실시간 위치 지도</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>엑스포시민광장 실시간 위치 안내</title>
     <style>
-        body { margin: 0; padding: 0; background-color: #f0f0f0; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; }
-        .map-container { position: relative; display: inline-block; box-shadow: 0 4px 8px rgba(0,0,0,0.2); border-radius: 8px; overflow: hidden; max-width: 95%; }
-        .map-image { display: block; max-width: 100%; height: auto; }
-        .location-marker { position: absolute; width: 20px; height: 20px; background-color: red; border: 3px solid white; border-radius: 50%; transform: translate(-50%, -50%); box-shadow: 0 0 10px rgba(0,0,0,0.5); display: none; }
-        .controls { margin-top: 20px; text-align: center; }
-        #track-btn { padding: 10px 20px; font-size: 16px; background-color: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; }
-        #track-btn.active { background-color: #dc3545; }
-        #status { margin-top: 10px; font-size: 14px; color: #666; }
+        body { margin: 0; padding: 0; background-color: #000; color: #fff; font-family: sans-serif; overflow-x: hidden; }
+        .header { background: #222; padding: 10px; text-align: center; font-size: 14px; position: sticky; top: 0; z-index: 1000; }
+        
+        /* 지도 컨테이너 */
+        #map-wrapper { position: relative; width: 100%; display: inline-block; cursor: crosshair; }
+        #map-img { width: 100%; display: block; -webkit-user-drag: none; }
+
+        /* 현재 위치 핀 */
+        #user-pin {
+            position: absolute; width: 24px; height: 24px;
+            background: radial-gradient(circle, #00ff00 30%, transparent 70%);
+            border: 2px solid #fff; border-radius: 50%;
+            box-shadow: 0 0 10px #00ff00;
+            transform: translate(-50%, -50%);
+            display: none; z-index: 500;
+        }
+
+        /* 보정용 십자선 */
+        .axis { position: absolute; background-color: rgba(255, 255, 255, 0.5); pointer-events: none; display: none; }
+        .axis-x { height: 1px; width: 100%; left: 0; }
+        .axis-y { width: 1px; height: 100%; top: 0; }
+
+        /* 하단 안내 패널 */
+        .status-panel { padding: 15px; background: #111; font-size: 12px; line-height: 1.6; }
+        .highlight { color: #00ff00; font-weight: bold; }
     </style>
 </head>
 <body>
 
-<div class="map-container">
-    <img src="map.png" class="map-image" alt="지도">
-    
-    <div id="user-location" class="location-marker"></div>
+<div class="header">
+    <span id="instruction">📍 지도 위 **서로 먼 두 지점**을 클릭해 보정해 주세요.</span>
 </div>
 
-<div class="controls">
-    <button id="track-btn">위치 추적 시작</button>
-    <div id="status"></div>
+<div id="map-wrapper">
+    <img src="map.png" id="map-img" alt="현장 조감도">
+    <div id="user-pin"></div>
+    <div id="axis-x" class="axis axis-x"></div>
+    <div id="axis-y" class="axis axis-y"></div>
+</div>
+
+<div class="status-panel">
+    <div>내 위도/경도: <span id="current-gps" class="highlight">신호 대기 중...</span></div>
+    <div id="calibration-status">보정 필요: 0 / 2 지점 완료</div>
+    <hr style="border: 0.5px solid #333;">
+    <div style="font-size: 11px; color: #888;">
+        * 보정법: 지도를 클릭하고, 구글 지도에서 확인한 해당 지점의 위도/경도를 순서대로 넣으세요.<br>
+        * 완료 후 초록색 원이 내 위치입니다.
+    </div>
 </div>
 
 <script>
-    // 1. 사용자가 제공한 4개 모서리 데이터 정의
-    const cornerNW = { imgX: 3.21, imgY: 3.53, lat: 36.370968, lng: 127.382809 }; // 북서
-    const cornerNE = { imgX: 95.07, imgY: 9.17, lat: 36.370567, lng: 127.393300 }; // 북동
-    const cornerSE = { imgX: 96.02, imgY: 94.99, lat: 36.365056, lng: 127.393357 }; // 남동
-    const cornerSW = { imgX: 3.70, imgY: 94.62, lat: 36.365051, lng: 127.382840 }; // 남서
+(function() {
+    const wrapper = document.getElementById('map-wrapper');
+    const img = document.getElementById('map-img');
+    const pin = document.getElementById('user-pin');
+    const axisX = document.getElementById('axis-x');
+    const axisY = document.getElementById('axis-y');
+    const gpsStatus = document.getElementById('current-gps');
+    const calibStatus = document.getElementById('calibration-status');
+    const instruction = document.getElementById('instruction');
 
-    // 2. 보간법을 위한 범위 계산 (단순 선형 보간 사용)
-    const latNorthAvg = (cornerNW.lat + cornerNE.lat) / 2;
-    const latSouthAvg = (cornerSW.lat + cornerSE.lat) / 2;
-    const latRange = latNorthAvg - latSouthAvg;
+    let calibPoints = []; // [{x, y, lat, lng}, ...]
 
-    const lngWestAvg = (cornerNW.lng + cornerSW.lng) / 2;
-    const lngEastAvg = (cornerNE.lng + cornerSE.lng) / 2;
-    const lngRange = lngEastAvg - lngWestAvg;
-
-    const imgXWestAvg = (cornerNW.imgX + cornerSW.imgX) / 2;
-    const imgXEastAvg = (cornerNE.imgX + cornerSE.imgX) / 2;
-    const imgXRange = imgXEastAvg - imgXWestAvg;
-
-    const imgYNorthAvg = (cornerNW.imgY + cornerNE.imgY) / 2;
-    const imgYSouthAvg = (cornerSW.imgY + cornerSE.imgY) / 2;
-    const imgYRange = imgYSouthAvg - imgYNorthAvg;
-
-    // 3. GPS 좌표를 이미지 비율 좌표로 변환하는 함수
-    function calculatePosition(lat, lng) {
-        // 이미지 범위 밖인지 확인 (기본적인 경계 체크)
-        if (lat > latNorthAvg + 0.001 || lat < latSouthAvg - 0.001 || lng < lngWestAvg - 0.001 || lng > lngEastAvg + 0.001) {
-            return null; // 지도 범위를 벗어남
+    // 1. 지도 클릭 시 보정 데이터 수집
+    wrapper.addEventListener('click', function(e) {
+        if (calibPoints.length >= 2) {
+            if(!confirm("이미 보정이 완료되었습니다. 다시 보정하시겠습니까?")) return;
+            calibPoints = [];
         }
 
-        const latNorm = (latNorthAvg - lat) / latRange;
-        const lngNorm = (lng - lngWestAvg) / lngRange;
+        const rect = img.getBoundingClientRect();
+        const xPercent = (e.clientX - rect.left) / rect.width * 100;
+        const yPercent = (e.clientY - rect.top) / rect.height * 100;
 
-        const imgXPercent = imgXWestAvg + lngNorm * imgXRange;
-        const imgYPercent = imgYNorthAvg + latNorm * imgYRange;
+        // 십자선 표시
+        axisX.style.top = yPercent + '%';
+        axisY.style.left = xPercent + '%';
+        axisX.style.display = 'block';
+        axisY.style.display = 'block';
 
-        return { x: imgXPercent, y: imgYPercent };
-    }
+        const lat = prompt(`클릭 지점의 실제 '위도(Latitude)'를 입력하세요:\n(예: 36.3685)`);
+        if (!lat) return;
+        const lng = prompt(`클릭 지점의 실제 '경도(Longitude)'를 입력하세요:\n(예: 127.3852)`);
+        if (!lng) return;
 
-    // 4. Geolocation 및 UI 제어
-    const trackBtn = document.getElementById('track-btn');
-    const userLocationMarker = document.getElementById('user-location');
-    const statusDiv = document.getElementById('status');
-    let watchId = null;
+        calibPoints.push({
+            x: xPercent, y: yPercent, 
+            lat: parseFloat(lat), lng: parseFloat(lng)
+        });
 
-    function showPosition(position) {
-        const lat = position.coords.latitude;
-        const lng = position.coords.longitude;
-        const accuracy = position.coords.accuracy;
-
-        const mapPos = calculatePosition(lat, lng);
-
-        if (mapPos) {
-            userLocationMarker.style.left = mapPos.x + '%';
-            userLocationMarker.style.top = mapPos.y + '%';
-            userLocationMarker.style.display = 'block';
-            statusDiv.innerHTML = `위치: 위도 ${lat.toFixed(6)}, 경도 ${lng.toFixed(6)} (정확도: ${accuracy.toFixed(1)}m)`;
-        } else {
-            userLocationMarker.style.display = 'none';
-            statusDiv.innerHTML = `위치: 위도 ${lat.toFixed(6)}, 경도 ${lng.toFixed(6)} (지도 범위 밖)`;
-        }
-    }
-
-    function showError(error) {
-        switch(error.code) {
-            case error.PERMISSION_DENIED:
-                statusDiv.innerHTML = "사용자가 위치 정보 접근을 거부했습니다."
-                break;
-            case error.POSITION_UNAVAILABLE:
-                statusDiv.innerHTML = "위치 정보를 사용할 수 없습니다."
-                break;
-            case error.TIMEOUT:
-                statusDiv.innerHTML = "위치 정보를 가져오는 시간이 초과되었습니다."
-                break;
-            case error.UNKNOWN_ERROR:
-                statusDiv.innerHTML = "알 수 없는 오류가 발생했습니다."
-                break;
-        }
-    }
-
-    trackBtn.addEventListener('click', () => {
-        if (watchId === null) {
-            if (navigator.geolocation) {
-                // 실시간 위치 추적 시작
-                watchId = navigator.geolocation.watchPosition(showPosition, showError, {
-                    enableHighAccuracy: true,
-                    maximumAge: 0,
-                    timeout: 5000
-                });
-                trackBtn.textContent = "위치 추적 중지";
-                trackBtn.classList.add('active');
-                statusDiv.innerHTML = "위치를 찾는 중입니다...";
-            } else {
-                statusDiv.innerHTML = "이 브라우저는 Geolocation을 지원하지 않습니다.";
-            }
-        } else {
-            // 위치 추적 중지
-            navigator.geolocation.clearWatch(watchId);
-            watchId = null;
-            trackBtn.textContent = "위치 추적 시작";
-            trackBtn.classList.remove('active');
-            userLocationMarker.style.display = 'none';
-            statusDiv.innerHTML = "위치 추적이 중지되었습니다.";
+        calibStatus.innerText = `보정 완료: ${calibPoints.length} / 2 지점 완료`;
+        
+        if (calibPoints.length === 2) {
+            instruction.innerHTML = "✅ 보정 완료! 실시간 위치를 추적합니다.";
+            axisX.style.display = 'none';
+            axisY.style.display = 'none';
         }
     });
+
+    // 2. 실시간 위치 계산 및 표시
+    function updateLocation(lat, lng) {
+        gpsStatus.innerText = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+
+        if (calibPoints.length < 2) return;
+
+        const p1 = calibPoints[0];
+        const p2 = calibPoints[1];
+
+        // 수직 조감도 선형 비례식 (Linear Mapping)
+        // 경도(lng) -> X%
+        const x = p1.x + (lng - p1.lng) * (p2.x - p1.x) / (p2.lng - p1.lng);
+        // 위도(lat) -> Y%
+        const y = p1.y + (lat - p1.lat) * (p2.y - p1.y) / (p2.lat - p1.lat);
+
+        // 맵 범위 내에 있을 때만 핀 표시
+        if (x >= 0 && x <= 100 && y >= 0 && y <= 100) {
+            pin.style.left = x + '%';
+            pin.style.top = y + '%';
+            pin.style.display = 'block';
+        } else {
+            pin.style.display = 'none';
+        }
+    }
+
+    // 3. GPS 수신 시작
+    if (navigator.geolocation) {
+        navigator.geolocation.watchPosition(
+            function(pos) {
+                updateLocation(pos.coords.latitude, pos.coords.longitude);
+            },
+            function(err) {
+                gpsStatus.innerText = "GPS를 켜주세요.";
+            },
+            { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 }
+        );
+    } else {
+        gpsStatus.innerText = "이 브라우저는 GPS를 지원하지 않습니다.";
+    }
+})();
 </script>
 
 </body>
