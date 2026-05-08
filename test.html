@@ -3,55 +3,62 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>엑스포시민광장 실시간 위치 안내</title>
+    <title>엑스포시민광장 정밀 위치 안내</title>
     <style>
-        body { margin: 0; padding: 0; background-color: #000; color: #fff; font-family: sans-serif; overflow-x: hidden; }
-        .header { background: #222; padding: 10px; text-align: center; font-size: 14px; position: sticky; top: 0; z-index: 1000; }
+        body { margin: 0; padding: 0; background-color: #111; color: #fff; font-family: 'Pretendard', sans-serif; overflow-x: hidden; }
+        
+        .header { background: #222; padding: 12px; text-align: center; font-size: 14px; position: sticky; top: 0; z-index: 1000; box-shadow: 0 2px 10px rgba(0,0,0,0.5); }
+        .instruction { color: #ffeb3b; font-weight: bold; }
         
         /* 지도 컨테이너 */
-        #map-wrapper { position: relative; width: 100%; display: inline-block; cursor: crosshair; }
+        #map-wrapper { position: relative; width: 100%; display: inline-block; }
         #map-img { width: 100%; display: block; -webkit-user-drag: none; }
 
-        /* 현재 위치 핀 */
-        #user-pin {
-            position: absolute; width: 24px; height: 24px;
-            background: radial-gradient(circle, #00ff00 30%, transparent 70%);
-            border: 2px solid #fff; border-radius: 50%;
-            box-shadow: 0 0 10px #00ff00;
+        /* 내 위치 핀 (보정 후 나타남) */
+        #my-pin {
+            position: absolute; width: 20px; height: 20px;
+            background-color: #00ff00; border: 3px solid #fff; border-radius: 50%;
+            box-shadow: 0 0 15px rgba(0, 255, 0, 0.8);
             transform: translate(-50%, -50%);
             display: none; z-index: 500;
+            transition: left 0.3s ease, top 0.3s ease;
         }
 
-        /* 보정용 십자선 */
-        .axis { position: absolute; background-color: rgba(255, 255, 255, 0.5); pointer-events: none; display: none; }
-        .axis-x { height: 1px; width: 100%; left: 0; }
-        .axis-y { width: 1px; height: 100%; top: 0; }
+        /* 사용자가 찍은 교정 포인트 마커 */
+        .calib-marker {
+            position: absolute; width: 12px; height: 12px;
+            background-color: #ff3b30; border: 2px solid #fff; border-radius: 50%;
+            transform: translate(-50%, -50%); z-index: 400;
+        }
 
-        /* 하단 안내 패널 */
-        .status-panel { padding: 15px; background: #111; font-size: 12px; line-height: 1.6; }
-        .highlight { color: #00ff00; font-weight: bold; }
+        /* 하단 상태 패널 */
+        .status-panel { padding: 15px; background: #1a1a1a; font-size: 13px; line-height: 1.8; }
+        .highlight { color: #00ff00; font-weight: bold; font-family: monospace; }
+        .btn-reset { display: block; width: 100%; padding: 10px; margin-top: 10px; background: #444; color: white; border: none; border-radius: 5px; font-size: 14px; cursor: pointer; }
     </style>
 </head>
 <body>
 
 <div class="header">
-    <span id="instruction">📍 지도 위 **서로 먼 두 지점**을 클릭해 보정해 주세요.</span>
+    <span id="instruction" class="instruction">📍 현 위치로 이동 후, 지도에서 해당 위치를 터치하세요. (0/3 완료)</span>
 </div>
 
 <div id="map-wrapper">
-    <img src="map.jpg" id="map-img" alt="현장 조감도">
-    <div id="user-pin"></div>
-    <div id="axis-x" class="axis axis-x"></div>
-    <div id="axis-y" class="axis axis-y"></div>
+    <img src="map.png" id="map-img" alt="엑스포시민광장">
+    <div id="my-pin"></div>
+    <div id="markers-layer"></div>
 </div>
 
 <div class="status-panel">
-    <div>내 위도/경도: <span id="current-gps" class="highlight">신호 대기 중...</span></div>
-    <div id="calibration-status">보정 필요: 0 / 2 지점 완료</div>
-    <hr style="border: 0.5px solid #333;">
-    <div style="font-size: 11px; color: #888;">
-        * 보정법: 지도를 클릭하고, 구글 지도에서 확인한 해당 지점의 위도/경도를 순서대로 넣으세요.<br>
-        * 완료 후 초록색 원이 내 위치입니다.
+    <div>📡 현재 수신 중인 GPS: <span id="raw-gps" class="highlight">신호 대기 중...</span></div>
+    <div>🎯 교정 진행률: <span id="calib-status">3개의 포인트가 필요합니다.</span></div>
+    <button class="btn-reset" onclick="resetCalibration()">🔄 교정 초기화 및 다시하기</button>
+    <hr style="border: 0.5px solid #333; margin: 15px 0;">
+    <div style="font-size: 11px; color: #aaa;">
+        [가장 확실한 보정 방법]<br>
+        1. 광장 내의 눈에 띄는 랜드마크(예: 모서리, 입구 등)로 직접 걸어갑니다.<br>
+        2. 위 GPS 신호가 잡히는 것을 확인한 후, 지도상에서 현재 서 있는 지점을 화면에 터치합니다.<br>
+        3. 이 과정을 서로 멀리 떨어진 3곳에서 반복하여 거대한 삼각형 구역을 형성합니다.
     </div>
 </div>
 
@@ -59,90 +66,116 @@
 (function() {
     const wrapper = document.getElementById('map-wrapper');
     const img = document.getElementById('map-img');
-    const pin = document.getElementById('user-pin');
-    const axisX = document.getElementById('axis-x');
-    const axisY = document.getElementById('axis-y');
-    const gpsStatus = document.getElementById('current-gps');
-    const calibStatus = document.getElementById('calibration-status');
-    const instruction = document.getElementById('instruction');
+    const pin = document.getElementById('my-pin');
+    const markersLayer = document.getElementById('markers-layer');
+    const rawGpsText = document.getElementById('raw-gps');
+    const calibStatusText = document.getElementById('calib-status');
+    const instructionText = document.getElementById('instruction');
 
-    let calibPoints = []; // [{x, y, lat, lng}, ...]
+    let currentLat = null;
+    let currentLng = null;
+    window.calibPoints = []; // 교정 데이터 저장소
 
-    // 1. 지도 클릭 시 보정 데이터 수집
+    // 1. 실시간 GPS 수신 (백그라운드에서 계속 동작)
+    if (navigator.geolocation) {
+        navigator.geolocation.watchPosition(
+            function(pos) {
+                currentLat = pos.coords.latitude;
+                currentLng = pos.coords.longitude;
+                rawGpsText.innerText = `${currentLat.toFixed(6)}, ${currentLng.toFixed(6)}`;
+                
+                // 교정이 3개 다 끝났다면 내 위치 핀 업데이트
+                if (window.calibPoints.length === 3) {
+                    drawLocationOnMap();
+                }
+            },
+            function(err) {
+                rawGpsText.innerText = "GPS 권한이 필요합니다.";
+            },
+            { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 }
+        );
+    }
+
+    // 2. 지도 클릭(터치) 시 현재 GPS 좌표와 화면 픽셀 매칭
     wrapper.addEventListener('click', function(e) {
-        if (calibPoints.length >= 2) {
-            if(!confirm("이미 보정이 완료되었습니다. 다시 보정하시겠습니까?")) return;
-            calibPoints = [];
+        if (window.calibPoints.length >= 3) {
+            alert("이미 3점 교정이 완료되었습니다. 다시 하려면 초기화 버튼을 누르세요.");
+            return;
         }
 
+        if (!currentLat || !currentLng) {
+            alert("아직 GPS 신호를 잡지 못했습니다. 잠시만 기다려주세요.");
+            return;
+        }
+
+        // 터치한 위치의 X, Y 퍼센트 계산
         const rect = img.getBoundingClientRect();
         const xPercent = (e.clientX - rect.left) / rect.width * 100;
         const yPercent = (e.clientY - rect.top) / rect.height * 100;
 
-        // 십자선 표시
-        axisX.style.top = yPercent + '%';
-        axisY.style.left = xPercent + '%';
-        axisX.style.display = 'block';
-        axisY.style.display = 'block';
+        // 시각적 마커(빨간 점) 추가
+        const marker = document.createElement('div');
+        marker.className = 'calib-marker';
+        marker.style.left = xPercent + '%';
+        marker.style.top = yPercent + '%';
+        markersLayer.appendChild(marker);
 
-        const lat = prompt(`클릭 지점의 실제 '위도(Latitude)'를 입력하세요:\n(예: 36.3685)`);
-        if (!lat) return;
-        const lng = prompt(`클릭 지점의 실제 '경도(Longitude)'를 입력하세요:\n(예: 127.3852)`);
-        if (!lng) return;
-
-        calibPoints.push({
-            x: xPercent, y: yPercent, 
-            lat: parseFloat(lat), lng: parseFloat(lng)
+        // 데이터 저장
+        window.calibPoints.push({
+            x: xPercent, 
+            y: yPercent, 
+            lat: currentLat, 
+            lng: currentLng
         });
 
-        calibStatus.innerText = `보정 완료: ${calibPoints.length} / 2 지점 완료`;
-        
-        if (calibPoints.length === 2) {
-            instruction.innerHTML = "✅ 보정 완료! 실시간 위치를 추적합니다.";
-            axisX.style.display = 'none';
-            axisY.style.display = 'none';
+        // UI 업데이트
+        const count = window.calibPoints.length;
+        instructionText.innerText = `📍 다른 위치로 이동 후 터치하세요. (${count}/3 완료)`;
+        calibStatusText.innerText = `${count}개 지점 입력 완료`;
+
+        if (count === 3) {
+            instructionText.innerText = "✅ 정밀 교정 완료! 실시간 위치를 표시합니다.";
+            instructionText.style.color = "#00ff00";
+            drawLocationOnMap(); // 즉시 위치 그리기
         }
     });
 
-    // 2. 실시간 위치 계산 및 표시
-    function updateLocation(lat, lng) {
-        gpsStatus.innerText = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+    // 3. 원근감 왜곡을 잡는 3점 교정(Barycentric) 맵핑 계산
+    function drawLocationOnMap() {
+        if (window.calibPoints.length < 3) return;
 
-        if (calibPoints.length < 2) return;
+        const A = window.calibPoints[0];
+        const B = window.calibPoints[1];
+        const C = window.calibPoints[2];
+        const P = { lat: currentLat, lng: currentLng };
 
-        const p1 = calibPoints[0];
-        const p2 = calibPoints[1];
+        // 3개의 점으로 이루어진 삼각형 내에서의 비율(가중치) 계산
+        const det = (B.lat - C.lat) * (A.lng - C.lng) + (C.lng - B.lng) * (A.lat - C.lat);
+        if (det === 0) return; // 점 3개가 일직선 상에 있을 경우 에러 방지
 
-        // 수직 조감도 선형 비례식 (Linear Mapping)
-        // 경도(lng) -> X%
-        const x = p1.x + (lng - p1.lng) * (p2.x - p1.x) / (p2.lng - p1.lng);
-        // 위도(lat) -> Y%
-        const y = p1.y + (lat - p1.lat) * (p2.y - p1.y) / (p2.lat - p1.lat);
+        const w1 = ((B.lat - C.lat) * (P.lng - C.lng) + (C.lng - B.lng) * (P.lat - C.lat)) / det;
+        const w2 = ((C.lat - A.lat) * (P.lng - C.lng) + (A.lng - C.lng) * (P.lat - C.lat)) / det;
+        const w3 = 1 - w1 - w2;
 
-        // 맵 범위 내에 있을 때만 핀 표시
-        if (x >= 0 && x <= 100 && y >= 0 && y <= 100) {
-            pin.style.left = x + '%';
-            pin.style.top = y + '%';
-            pin.style.display = 'block';
-        } else {
-            pin.style.display = 'none';
-        }
+        // 비율을 맵 픽셀 퍼센트에 적용
+        const mapX = (w1 * A.x) + (w2 * B.x) + (w3 * C.x);
+        const mapY = (w1 * A.y) + (w2 * B.y) + (w3 * C.y);
+
+        // 결과 좌표에 내 핀 표시
+        pin.style.left = mapX + '%';
+        pin.style.top = mapY + '%';
+        pin.style.display = 'block';
     }
 
-    // 3. GPS 수신 시작
-    if (navigator.geolocation) {
-        navigator.geolocation.watchPosition(
-            function(pos) {
-                updateLocation(pos.coords.latitude, pos.coords.longitude);
-            },
-            function(err) {
-                gpsStatus.innerText = "GPS를 켜주세요.";
-            },
-            { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 }
-        );
-    } else {
-        gpsStatus.innerText = "이 브라우저는 GPS를 지원하지 않습니다.";
-    }
+    // 4. 초기화 함수
+    window.resetCalibration = function() {
+        window.calibPoints = [];
+        markersLayer.innerHTML = '';
+        pin.style.display = 'none';
+        instructionText.innerText = "📍 현 위치로 이동 후, 지도에서 해당 위치를 터치하세요. (0/3 완료)";
+        instructionText.style.color = "#ffeb3b";
+        calibStatusText.innerText = "초기화됨. 첫 번째 포인트를 찍어주세요.";
+    };
 })();
 </script>
 
