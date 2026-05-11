@@ -10,7 +10,6 @@
         #map-wrapper { position: relative; width: 100%; display: block; overflow: hidden; }
         #map-img { width: 100%; display: block; -webkit-user-drag: none; }
 
-        /* 📡 상단 GPS 상태 알림창 */
         #toast {
             position: fixed; top: 15px; left: 50%; transform: translateX(-50%);
             background: rgba(0, 0, 0, 0.7); color: #fff;
@@ -19,23 +18,22 @@
             transition: opacity 0.5s ease;
         }
 
-        /* 🏷️ 맵 텍스트 라벨 스타일 (여기서 색상과 불투명도 조절) */
+        /* 🏷️ 맵 텍스트 라벨 기본 스타일 (크기 조절은 여기서!) */
         .map-label {
             position: absolute;
-            transform: translate(-50%, -50%); /* 지정한 좌표가 텍스트의 정중앙에 오도록 설정 */
+            transform: translate(-50%, -50%);
+            color: #ffffff;
             
-            /* 배경색 및 불투명도 조절: rgba(빨강, 초록, 파랑, 불투명도) */
-            background-color: rgba(0, 0, 0, 0.6); 
+            /* 🔥 크기 조절 옵션 */
+            font-size: 10px; /* 글자 크기 (기존 12px -> 10px로 축소) */
+            padding: 4px 8px; /* 배경 크기/여백 (위아래 4px, 좌우 8px로 축소) */
+            border-radius: 5px; /* 모서리 둥글기 (조금 덜 둥글게 축소) */
             
-            color: #ffffff; /* 글자 색상 (흰색) */
-            padding: 6px 12px; /* 글자 주변 여백 (위아래 6px, 좌우 12px) */
-            border-radius: 8px; /* 모서리 둥글기 */
-            font-size: 12px;
             font-weight: bold;
-            white-space: nowrap; /* 글자가 줄바꿈 되지 않도록 설정 */
-            z-index: 400; /* 핀(500)보다는 아래, 지도보다는 위에 배치 */
-            pointer-events: none; /* 클릭 방해 방지 */
-            box-shadow: 0 2px 4px rgba(0,0,0,0.5); /* 약간의 그림자 */
+            white-space: nowrap;
+            z-index: 400;
+            pointer-events: none;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.5);
         }
 
         /* 📍 투명한 앵커 */
@@ -45,7 +43,7 @@
             transition: left 0.5s cubic-bezier(0.22, 1, 0.36, 1), top 0.5s cubic-bezier(0.22, 1, 0.36, 1);
         }
 
-        /* 🎨 그라데이션 물방울 핀 */
+        /* 🎨 핀 & 물결 애니메이션 */
         .pin-body {
             position: absolute; bottom: 0px; left: -7.5px;
             width: 15px; height: 21px;
@@ -56,7 +54,6 @@
             animation: bounceIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
         }
 
-        /* 🌊 레이더 물결 애니메이션 */
         .pin-pulse {
             position: absolute; bottom: -3px; left: -6px;
             width: 12px; height: 4px;
@@ -65,14 +62,8 @@
             animation: pulsing 1.5s infinite ease-out;
         }
 
-        @keyframes pulsing {
-            0% { transform: scale(0.5); opacity: 1; }
-            100% { transform: scale(2.0); opacity: 0; }
-        }
-        @keyframes bounceIn {
-            0% { transform: translateY(-10px) scale(0.8); opacity: 0; }
-            100% { transform: translateY(0) scale(1); opacity: 1; }
-        }
+        @keyframes pulsing { 0% { transform: scale(0.5); opacity: 1; } 100% { transform: scale(2.0); opacity: 0; } }
+        @keyframes bounceIn { 0% { transform: translateY(-10px) scale(0.8); opacity: 0; } 100% { transform: translateY(0) scale(1); opacity: 1; } }
     </style>
 </head>
 <body>
@@ -81,7 +72,6 @@
 
 <div id="map-wrapper">
     <img src="map.png" id="map-img" alt="엑스포시민광장 조감도">
-    
     <div id="user-pin">
         <div class="pin-pulse"></div>
         <div class="pin-body"></div>
@@ -92,14 +82,18 @@
 (function() {
     // ==========================================
     // 📝 맵 텍스트 라벨 데이터 (여기에 계속 추가하세요!)
+    // bgColor: "rgba(R, G, B, 불투명도)" 형태로 색상 지정 가능
     // ==========================================
     const mapLabels = [
-        { text: "대전엑스포시민광장", x: 49.0417, y: 75.9913 },
-        // 예시: { text: "한밭수목원 입구", x: 80.5000, y: 15.2000 },
-        // 예시: { text: "화장실", x: 20.1234, y: 85.5678 }
+        { text: "대전엑스포시민광장", x: 49.0417, y: 75.9913, bgColor: "rgba(0, 0, 0, 0.6)" },
+        
+        // 추가 예시 (빨간색 반투명)
+        // { text: "위험 구역", x: 30.0000, y: 20.0000, bgColor: "rgba(255, 0, 0, 0.7)" },
+        
+        // 추가 예시 (파란색 반투명)
+        // { text: "안내소", x: 80.0000, y: 50.0000, bgColor: "rgba(0, 100, 255, 0.5)" }
     ];
 
-    // 라벨들을 지도에 그려주는 함수
     const wrapper = document.getElementById('map-wrapper');
     mapLabels.forEach(label => {
         const labelDiv = document.createElement('div');
@@ -107,6 +101,10 @@
         labelDiv.innerText = label.text;
         labelDiv.style.left = label.x + '%';
         labelDiv.style.top = label.y + '%';
+        
+        // 데이터에 색상이 있으면 적용하고, 없으면 기본 검은색 반투명 적용
+        labelDiv.style.backgroundColor = label.bgColor || "rgba(0, 0, 0, 0.6)";
+        
         wrapper.appendChild(labelDiv);
     });
 
