@@ -23,6 +23,7 @@
 
         /* 🏷️ 텍스트 라벨 공통 스타일 */
         .map-label {
+            text-align: center;
             position: absolute;
             transform: translate(-50%, -50%); /* 중심점 기준 정렬 */
             color: #ffffff;
@@ -191,7 +192,7 @@
         // 연동된 텍스트 라벨 배치 (베이스 x,y 에 오프셋을 더함)
         const labelDiv = document.createElement('div');
         labelDiv.className = 'map-label';
-        labelDiv.innerText = label.text;
+        labelDiv.innerHTML = label.text;
         labelDiv.style.backgroundColor = label.bgColor || "rgba(0,0,0,0.4)";
         labelDiv.style.setProperty('--label-size', (label.size || 1.6) + unit);
 
