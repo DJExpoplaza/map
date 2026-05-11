@@ -21,16 +21,25 @@
             transition: opacity 0.5s ease;
         }
 
-        /* 📱 하단 가로모드 안내 배너 (지도 밖) */
+        /* 📱 하단 안내 배너 (디자인 개선 및 문구 추가) */
         #bottom-notice {
             background-color: #1a1a1a;
-            color: #ffeb3b; /* 눈에 띄는 노란색 */
+            color: #ffeb3b; 
             text-align: center;
-            padding: 16px 10px;
+            padding: 15px 10px;
             font-size: 15px;
             font-weight: bold;
             border-top: 2px solid #333;
             letter-spacing: 0.5px;
+            line-height: 1.4;
+        }
+        /* 추가된 GPS 안내 서브 문구 스타일 */
+        .sub-notice {
+            display: block;
+            margin-top: 6px;
+            font-size: 12px;
+            color: #bbb;
+            font-weight: normal;
         }
 
         /* 🏷️ 텍스트 라벨 공통 스타일 */
@@ -111,7 +120,8 @@
 </div>
 
 <div id="bottom-notice">
-    📱 휴대폰을 가로로 돌리시면 더 크게 볼 수 있습니다.
+    📱 휴대폰을 가로로 돌리시면 더 크게 볼 수 있습니다.<br>
+    <span class="sub-notice">※ GPS(위치)를 켜야 정상적으로 동작하며, 그렇지 않을 경우 일반 안내도로만 표시됩니다.</span>
 </div>
 
 <script>
@@ -124,7 +134,7 @@
     // 1️⃣ [핀 + 텍스트] 장소 마커 데이터
     // ==========================================
     const placeMarkers = [
-        { text: "종합<br>안내센터", x: 54.8285, y: 58.5631, textOffsetX: 5, textOffsetY: -2, pinColor: "#000000", bgColor: "rgba(0, 0, 0, 0.8)", size: 1.3 },
+        { text: "종합<br>안내센터", x: 54.8285, y: 58.5631, textOffsetX: 5, textOffsetY: -2, pinColor: "#000000", bgColor: "rgba(0, 0, 0, 0.8)", size: 1.3 }, 
                 
         // 화장실
         { text: "화장실", x: 5.3935, y: 85.7466, textOffsetX: 0, textOffsetY: -6, pinColor: "#007bff", bgColor: "rgba(0, 123, 255, 0.8)", size: 1.3 },   
@@ -223,11 +233,12 @@
     });
 
     // ==========================================
-    // GPS 위치 추적 로직
+    // GPS 위치 추적 로직 (에러 핸들링 강화)
     // ==========================================
     const pin = document.getElementById('user-pin');
     const toast = document.getElementById('toast');
     let lastLat = null; let lastLng = null;
+    let alertShown = false; // 팝업창 중복 띄움 방지용
 
     const pts = [
         { lat: 36.370962, lng: 127.382746, x: 2.6834,  y: 1.8741  },
@@ -276,12 +287,34 @@
         }
     }
 
+    // 🔥 권한 및 타임아웃 세분화
     if (navigator.geolocation) {
         navigator.geolocation.watchPosition(
-            p => { lastLat = p.coords.latitude; lastLng = p.coords.longitude; updatePin(); },
-            e => { toast.innerText = "⚠️ GPS 연결 실패"; toast.style.background = "rgba(220, 53, 69, 0.9)"; },
-            { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
+            p => { 
+                lastLat = p.coords.latitude; 
+                lastLng = p.coords.longitude; 
+                updatePin(); 
+            },
+            e => { 
+                if (e.code === 1) { // PERMISSION_DENIED
+                    toast.innerText = "⚠️ 위치 권한이 차단되어 일반 안내도로 동작합니다.";
+                    toast.style.background = "rgba(220, 53, 69, 0.9)";
+                    if (!alertShown) {
+                        alert("현재 위치를 확인하려면 스마트폰 설정에서 웹 브라우저의 '위치(GPS) 권한'을 허용해 주세요.\n\n권한이 없으면 일반 안내도로만 제공됩니다.");
+                        alertShown = true;
+                    }
+                } else if (e.code === 3) { // TIMEOUT
+                    toast.innerText = "📡 신호가 약합니다. 잠시 대기 중...";
+                } else { // 기타 에러
+                    toast.innerText = "⚠️ GPS 연결에 실패했습니다.";
+                    toast.style.background = "rgba(220, 53, 69, 0.9)";
+                }
+            },
+            { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 } // 타임아웃 10초로 연장
         );
+    } else {
+        toast.innerText = "⚠️ 이 브라우저는 GPS를 지원하지 않습니다.";
+        toast.style.background = "rgba(220, 53, 69, 0.9)";
     }
 })();
 </script>
