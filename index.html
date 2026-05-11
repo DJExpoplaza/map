@@ -21,11 +21,23 @@
             transition: opacity 0.5s ease;
         }
 
+        /* 📱 하단 가로모드 안내 배너 (지도 밖) */
+        #bottom-notice {
+            background-color: #1a1a1a;
+            color: #ffeb3b; /* 눈에 띄는 노란색 */
+            text-align: center;
+            padding: 16px 10px;
+            font-size: 15px;
+            font-weight: bold;
+            border-top: 2px solid #333;
+            letter-spacing: 0.5px;
+        }
+
         /* 🏷️ 텍스트 라벨 공통 스타일 */
         .map-label {
             text-align: center;
             position: absolute;
-            transform: translate(-50%, -50%); /* 중심점 기준 정렬 */
+            transform: translate(-50%, -50%);
             color: #ffffff;
             font-size: var(--label-size); 
             padding: 0.2cqi 0.6cqi; 
@@ -40,7 +52,7 @@
         /* 📍 장소 아이콘 (핀 모양) */
         .place-pin-icon {
             position: absolute;
-            transform: translate(-50%, -100%); /* 뾰족한 끝이 좌표에 오도록 설정 */
+            transform: translate(-50%, -100%);
             width: 3.0cqi; 
             height: 3.0cqi;
             filter: drop-shadow(0 0.2cqi 0.4cqi rgba(0,0,0,0.5));
@@ -98,6 +110,10 @@
     </div>
 </div>
 
+<div id="bottom-notice">
+    📱 휴대폰을 가로로 돌리시면 더 크게 볼 수 있습니다.
+</div>
+
 <script>
 (function() {
     const wrapper = document.getElementById('map-wrapper');
@@ -107,46 +123,36 @@
     // ==========================================
     // 1️⃣ [핀 + 텍스트] 장소 마커 데이터
     // ==========================================
-    // * x, y: 핀이 꽂히는 정확한 베이스 좌표
-    // * textOffsetX, textOffsetY: 핀을 기준으로 텍스트를 이동시킬 퍼센트(%) 값
-    //   (예: offsetX: 2, offsetY: -3 이면 핀의 우측 상단 대각선으로 글자가 이동함)
-    
     const placeMarkers = [
-
-        { text: "종합<br>안내센터", x: 54.8285, y: 58.5631, textOffsetX: 5, textOffsetY: -2, pinColor: "#000000", bgColor: "rgba(0, 0, 0, 0.8)", size: 1.3 }, //종합안내센터
+        { text: "종합<br>안내센터", x: 54.8285, y: 58.5631, textOffsetX: 5, textOffsetY: -2, pinColor: "#000000", bgColor: "rgba(0, 0, 0, 0.8)", size: 1.3 },
                 
         // 화장실
-        { text: "화장실", x: 5.3935, y: 85.7466, textOffsetX: 0, textOffsetY: -6, pinColor: "#007bff", bgColor: "rgba(0, 123, 255, 0.8)", size: 1.3 },   //예술의전당 앞
-        { text: "화장실", x: 38.5685, y: 86.8218, textOffsetX: 0, textOffsetY: -6, pinColor: "#007bff", bgColor: "rgba(0, 123, 255, 0.8)", size: 1.3 },   //시립미술관 앞
-        { text: "화장실", x: 48.1771, y: 74.9714, textOffsetX: -4, textOffsetY: -2.5, pinColor: "#007bff", bgColor: "rgba(0, 123, 255, 0.8)", size: 1.3 },   //시민광장 화장실
-        { text: "화장실", x: 54.4115, y: 57.9851, textOffsetX: 0, textOffsetY: -6, pinColor: "#007bff", bgColor: "rgba(0, 123, 255, 0.8)", size: 1.3 },   //종합안내센터 화장실
-        { text: "화장실", x: 58.3786, y: 13.7036, textOffsetX: 0, textOffsetY: -6, pinColor: "#007bff", bgColor: "rgba(0, 123, 255, 0.8)", size: 1.3 },   //원형광장 우측
-        { text: "화장실", x: 51.2551, y: 2.4527, textOffsetX: 3.3, textOffsetY: 0, pinColor: "#007bff", bgColor: "rgba(0, 123, 255, 0.8)", size: 1.3 },   // 다리입구 화장실
+        { text: "화장실", x: 5.3935, y: 85.7466, textOffsetX: 0, textOffsetY: -6, pinColor: "#007bff", bgColor: "rgba(0, 123, 255, 0.8)", size: 1.3 },   
+        { text: "화장실", x: 38.5685, y: 86.8218, textOffsetX: 0, textOffsetY: -6, pinColor: "#007bff", bgColor: "rgba(0, 123, 255, 0.8)", size: 1.3 },   
+        { text: "화장실", x: 48.1771, y: 74.9714, textOffsetX: -4, textOffsetY: -2.5, pinColor: "#007bff", bgColor: "rgba(0, 123, 255, 0.8)", size: 1.3 },   
+        { text: "화장실", x: 54.4115, y: 57.9851, textOffsetX: 0, textOffsetY: -6, pinColor: "#007bff", bgColor: "rgba(0, 123, 255, 0.8)", size: 1.3 },   
+        { text: "화장실", x: 58.3786, y: 13.7036, textOffsetX: 0, textOffsetY: -6, pinColor: "#007bff", bgColor: "rgba(0, 123, 255, 0.8)", size: 1.3 },   
+        { text: "화장실", x: 51.2551, y: 2.4527, textOffsetX: 3.3, textOffsetY: 0, pinColor: "#007bff", bgColor: "rgba(0, 123, 255, 0.8)", size: 1.3 },   
 
-        { text: "화장실", x: 8.7336, y: 19.7551, textOffsetX: 0, textOffsetY: -6, pinColor: "#007bff", bgColor: "rgba(0, 123, 255, 0.8)", size: 1.3 },   //서원 좌측
-        { text: "화장실", x: 18.6389, y: 49.7653, textOffsetX: 0, textOffsetY: -6, pinColor: "#007bff", bgColor: "rgba(0, 123, 255, 0.8)", size: 1.3 },   //서원 중간
-        { text: "화장실", x: 28.1371, y: 11.3483, textOffsetX: 0, textOffsetY: -6, pinColor: "#007bff", bgColor: "rgba(0, 123, 255, 0.8)", size: 1.3 },   //서원 우측
+        { text: "화장실", x: 8.7336, y: 19.7551, textOffsetX: 0, textOffsetY: -6, pinColor: "#007bff", bgColor: "rgba(0, 123, 255, 0.8)", size: 1.3 },   
+        { text: "화장실", x: 18.6389, y: 49.7653, textOffsetX: 0, textOffsetY: -6, pinColor: "#007bff", bgColor: "rgba(0, 123, 255, 0.8)", size: 1.3 },   
+        { text: "화장실", x: 28.1371, y: 11.3483, textOffsetX: 0, textOffsetY: -6, pinColor: "#007bff", bgColor: "rgba(0, 123, 255, 0.8)", size: 1.3 },   
 
-        { text: "화장실", x: 82.2768, y: 14.3786, textOffsetX: 0, textOffsetY: -6, pinColor: "#007bff", bgColor: "rgba(0, 123, 255, 0.8)", size: 1.3 },   //동원 좌측
-        { text: "화장실", x: 67.9617, y: 55.2395, textOffsetX: 0, textOffsetY: -6, pinColor: "#007bff", bgColor: "rgba(0, 123, 255, 0.8)", size: 1.3 },   //동원 우측
+        { text: "화장실", x: 82.2768, y: 14.3786, textOffsetX: 0, textOffsetY: -6, pinColor: "#007bff", bgColor: "rgba(0, 123, 255, 0.8)", size: 1.3 },   
+        { text: "화장실", x: 67.9617, y: 55.2395, textOffsetX: 0, textOffsetY: -6, pinColor: "#007bff", bgColor: "rgba(0, 123, 255, 0.8)", size: 1.3 },   
 
-        //편의시설
+        // 편의시설
         { text: "카페 브람스", x: 17.7569, y: 86.3517, textOffsetX: 0, textOffsetY: -6, pinColor: "#ff9900", bgColor: "rgba(235, 171, 0, 0.8)", size: 1.3 },
         { text: "편의점&카페<br>자전거대여소", x: 49.9829, y: 76.7719, textOffsetX: 5, textOffsetY: -3, pinColor: "#ff9900", bgColor: "rgba(235, 171, 0, 0.8)", size: 1.2 },
         { text: "힐링카페 숲이랑", x: 75.2210 , y: 62.9887, textOffsetX: 6.2, textOffsetY: -3.5, pinColor: "#ff9900", bgColor: "rgba(235, 171, 0, 0.8)", size: 1.3 },
         { text: "매점", x: 82.8874 , y: 15.0629, textOffsetX: 3, textOffsetY: -3.5, pinColor: "#ff9900", bgColor: "rgba(235, 171, 0, 0.8)", size: 1.3 },
         { text: "매점", x: 69.0472 , y: 55.4350, textOffsetX: 3, textOffsetY: -3.5, pinColor: "#ff9900", bgColor: "rgba(235, 171, 0, 0.8)", size: 1.3 }
-        
     ];
 
     // ==========================================
     // 2️⃣ [텍스트 전용] 구역 이름 / 라벨 마커 데이터
     // ==========================================
-    // * x, y: 텍스트의 중심점 위치
-    // * 핀이 없이 글자만 맵 위에 떠 있습니다. 구역 명칭을 적을 때 유용합니다.
-    
     const textOnlyMarkers = [
-
         { text: "미디어큐브동", x: 49.2198, y: 78.8937, bgColor: "rgba(0, 0, 0, 0.8)", size: 1.3 },
         { text: "주차센터", x: 44.2673, y: 90.4387, bgColor: "rgba(0, 0, 0, 0.8)", size: 1.2 },
         { text: "동원입구", x: 56.1225, y: 34.6224, bgColor: "rgba(0, 0, 0, 0.8)", size: 1.2 },
@@ -159,7 +165,6 @@
         { text: "열대식물원", x: 74.4573, y: 70.7906, bgColor: "rgba(0, 0, 0, 0.8)", size: 1.3 },
         { text: "한밭수목원<br>연구관리동", x: 70.1079, y: 60.2862, bgColor: "rgba(0, 0, 0, 0.8)", size: 1.3 },
         { text: "천연기념물센터", x: 88.7042, y: 50.8492, bgColor: "rgba(0, 0, 0, 0.8)", size: 1.3 },
-        // { text: "종합<br>안내센터", x: 58.0543, y: 58.8873, bgColor: "rgba(0, 0, 0, 0.8)", size: 1.3 },   
         { text: "어린이 놀이터", x: 58.2748, y: 47.2855, bgColor: "rgba(0, 0, 0, 0.8)", size: 1.4 },   
         { text: "대전시립연정국악원", x: 60.2605, y: 79.5804, bgColor: "rgba(0, 0, 0, 0.8)", size: 1.3 },
         { text: "곤충생태관", x: 64.2809, y: 65.7075, bgColor: "rgba(0, 0, 0, 0.8)", size: 1.3 },
@@ -178,12 +183,10 @@
         { text: "3게이트", x: 45.6242, y: 95.0330, bgColor: "rgba(220, 53, 69, 0.8)", size: 1.2 },
         { text: "4게이트", x: 27.1031, y: 95.0330, bgColor: "rgba(220, 53, 69, 0.8)", size: 1.2 },
         { text: "5게이트", x: 3.2904, y: 95.0330,  bgColor: "rgba(220, 53, 69, 0.8)", size: 1.2 }                    
-        
     ];
 
     // --- 핀 마커 생성 렌더링 ---
     placeMarkers.forEach(label => {
-        // 핀(마커) 아이콘 배치
         const pinIcon = document.createElement('div');
         pinIcon.className = 'place-pin-icon';
         pinIcon.style.left = label.x + '%';
@@ -192,14 +195,12 @@
         pinIcon.innerHTML = `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" fill="${pColor}" stroke="white" stroke-width="1.5"/><circle cx="12" cy="9.2" r="3.5" fill="#ffffff"/></svg>`;
         wrapper.appendChild(pinIcon);
 
-        // 연동된 텍스트 라벨 배치 (베이스 x,y 에 오프셋을 더함)
         const labelDiv = document.createElement('div');
         labelDiv.className = 'map-label';
         labelDiv.innerHTML = label.text;
         labelDiv.style.backgroundColor = label.bgColor || "rgba(0,0,0,0.4)";
         labelDiv.style.setProperty('--label-size', (label.size || 1.6) + unit);
 
-        // 오프셋 좌표 적용 (퍼센트 단위로 이동)
         const textX = label.x + (label.textOffsetX || 0);
         const textY = label.y + (label.textOffsetY || 0);
         
@@ -222,7 +223,7 @@
     });
 
     // ==========================================
-    // GPS 위치 추적 로직 (보정값 적용)
+    // GPS 위치 추적 로직
     // ==========================================
     const pin = document.getElementById('user-pin');
     const toast = document.getElementById('toast');
