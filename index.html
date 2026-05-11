@@ -7,7 +7,11 @@
     <style>
         body { margin: 0; padding: 0; background-color: #000; overflow-x: hidden; font-family: 'Pretendard', sans-serif; }
         
-        #map-wrapper { position: relative; width: 100%; display: block; overflow: hidden; }
+        /* 🔥 맵 컨테이너에 컨테이너 쿼리 적용 (가로 폭 기준 스케일링) */
+        #map-wrapper { 
+            position: relative; width: 100%; display: block; overflow: hidden; 
+            container-type: inline-size; 
+        }
         #map-img { width: 100%; display: block; -webkit-user-drag: none; }
 
         #toast {
@@ -18,22 +22,22 @@
             transition: opacity 0.5s ease;
         }
 
-        /* 🏷️ 맵 텍스트 라벨 기본 스타일 (크기 조절은 여기서!) */
+        /* 🏷️ 맵 텍스트 라벨 (비율 반응형 cqi 적용) */
         .map-label {
             position: absolute;
             transform: translate(-50%, -50%);
             color: #ffffff;
             
-            /* 🔥 크기 조절 옵션 */
-            font-size: 6px; /* 글자 크기 (기존 12px -> 10px로 축소) */
-            padding: 2px 4px; /* 배경 크기/여백 (위아래 4px, 좌우 8px로 축소) */
-            border-radius: 2px; /* 모서리 둥글기 (조금 덜 둥글게 축소) */
+            /* px 대신 cqi(지도 너비 기준 %) 사용: 지도가 커지면 글자도 같이 커집니다 */
+            font-size: 2.0cqi; 
+            padding: 0.6cqi 1.2cqi; 
+            border-radius: 0.6cqi; 
             
             font-weight: bold;
             white-space: nowrap;
             z-index: 400;
             pointer-events: none;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+            box-shadow: 0 0.5cqi 1cqi rgba(0,0,0,0.5);
         }
 
         /* 📍 투명한 앵커 */
@@ -43,10 +47,13 @@
             transition: left 0.5s cubic-bezier(0.22, 1, 0.36, 1), top 0.5s cubic-bezier(0.22, 1, 0.36, 1);
         }
 
-        /* 🎨 핀 & 물결 애니메이션 */
+        /* 🎨 핀 & 물결 애니메이션 (비율 반응형 cqi 적용) */
         .pin-body {
-            position: absolute; bottom: 0px; left: -7.5px;
-            width: 15px; height: 21px;
+            position: absolute; 
+            bottom: 0px; 
+            left: -1.8cqi; /* 너비의 절반 */
+            width: 3.6cqi; 
+            height: 5.0cqi;
             background-image: url('data:image/svg+xml;utf8,<svg viewBox="0 0 24 36" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="%23ff512f"/><stop offset="100%" stop-color="%23dd2476"/></linearGradient><filter id="ds" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="%23000" flood-opacity="0.5"/></filter></defs><path d="M12 0C5.373 0 0 5.373 0 12c0 9 12 24 12 24s12-15 12-24C24 5.373 18.627 0 12 0z" fill="url(%23g)" filter="url(%23ds)"/><circle cx="12" cy="12" r="4.5" fill="%23ffffff"/></svg>');
             background-repeat: no-repeat;
             background-size: contain;
@@ -55,15 +62,26 @@
         }
 
         .pin-pulse {
-            position: absolute; bottom: -3px; left: -6px;
-            width: 12px; height: 4px;
+            position: absolute; 
+            bottom: -0.6cqi; 
+            left: -1.4cqi;
+            width: 2.8cqi; 
+            height: 1.0cqi;
             background: rgba(221, 36, 118, 0.8);
             border-radius: 50%; z-index: -1;
             animation: pulsing 1.5s infinite ease-out;
         }
 
         @keyframes pulsing { 0% { transform: scale(0.5); opacity: 1; } 100% { transform: scale(2.0); opacity: 0; } }
-        @keyframes bounceIn { 0% { transform: translateY(-10px) scale(0.8); opacity: 0; } 100% { transform: translateY(0) scale(1); opacity: 1; } }
+        @keyframes bounceIn { 0% { transform: translateY(-2cqi) scale(0.8); opacity: 0; } 100% { transform: translateY(0) scale(1); opacity: 1; } }
+
+        /* 🔥 구형 기기 호환성을 위한 vw 폴백 (cqi 미지원 기기용 안전장치) */
+        @supports not (container-type: inline-size) {
+            .map-label { font-size: 2.0vw; padding: 0.6vw 1.2vw; border-radius: 0.6vw; box-shadow: 0 0.5vw 1vw rgba(0,0,0,0.5); }
+            .pin-body { left: -1.8vw; width: 3.6vw; height: 5.0vw; }
+            .pin-pulse { bottom: -0.6vw; left: -1.4vw; width: 2.8vw; height: 1.0vw; }
+            @keyframes bounceIn { 0% { transform: translateY(-2vw) scale(0.8); opacity: 0; } 100% { transform: translateY(0) scale(1); opacity: 1; } }
+        }
     </style>
 </head>
 <body>
@@ -81,18 +99,23 @@
 <script>
 (function() {
     // ==========================================
-    // 📝 맵 텍스트 라벨 데이터 (여기에 계속 추가하세요!)
-    // bgColor: "rgba(R, G, B, 불투명도)" 형태로 색상 지정 가능
+    // 📝 맵 텍스트 라벨 데이터
     // ==========================================
     const mapLabels = [
         { text: "미디어큐브동", x: 49.0417, y: 73.9913, bgColor: "rgba(0, 0, 0, 0.6)" },
         { text: "이응노미술관", x: 41.2744, y: 65.9492, bgColor: "rgba(0, 0, 0, 0.6)" },
         
-        // 추가 예시 (빨간색 반투명)
-        // { text: "위험 구역", x: 30.0000, y: 20.0000, bgColor: "rgba(255, 0, 0, 0.7)" },
+        // 추가 예시: 빨간색 반투명
+        { text: "위험 구역", x: 30.0000, y: 20.0000, bgColor: "rgba(220, 53, 69, 0.8)" },
         
-        // 추가 예시 (파란색 반투명)
-        // { text: "안내소", x: 80.0000, y: 50.0000, bgColor: "rgba(0, 100, 255, 0.5)" }
+        // 추가 예시: 파란색 반투명
+        { text: "안내소", x: 80.0000, y: 50.0000, bgColor: "rgba(0, 123, 255, 0.8)" },
+
+        // 🟡 추가 예시: 노란색 반투명 (글자가 잘 보이도록 약간 어두운 노란색 계열)
+        { text: "푸드트럭 존", x: 20.0000, y: 40.0000, bgColor: "rgba(235, 171, 0, 0.8)" },
+
+        // 🟢 추가 예시: 녹색 반투명
+        { text: "안전 휴게소", x: 70.0000, y: 80.0000, bgColor: "rgba(40, 167, 69, 0.8)" }
     ];
 
     const wrapper = document.getElementById('map-wrapper');
@@ -102,10 +125,7 @@
         labelDiv.innerText = label.text;
         labelDiv.style.left = label.x + '%';
         labelDiv.style.top = label.y + '%';
-        
-        // 데이터에 색상이 있으면 적용하고, 없으면 기본 검은색 반투명 적용
         labelDiv.style.backgroundColor = label.bgColor || "rgba(0, 0, 0, 0.6)";
-        
         wrapper.appendChild(labelDiv);
     });
 
