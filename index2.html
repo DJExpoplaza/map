@@ -94,4 +94,197 @@
             .place-pin-icon { width: 3.0vw; height: 3.0vw; }
             .pin-body { left: -1.4vw; width: 2.8vw; height: 4.0vw; }
             .pin-pulse { bottom: -0.4vw; left: -1.1vw; width: 2.2vw; height: 0.8vw; }
-            @keyframes bounceIn { 0% { transform: translateY(-2vw) scale(0.8); opacity: 0;
+            @keyframes bounceIn { 0% { transform: translateY(-2vw) scale(0.8); opacity: 0; } 100% { transform: translateY(0) scale(1); opacity: 1; } }
+        }
+    </style>
+</head>
+<body>
+
+<div id="toast">📡 GPS 신호를 찾는 중입니다...</div>
+
+<div id="map-wrapper">
+    <img src="map.png" id="map-img" alt="엑스포시민광장 조감도">
+    <div id="user-pin">
+        <div class="pin-pulse"></div>
+        <div class="pin-body"></div>
+    </div>
+</div>
+
+<div id="bottom-notice">
+    📱 휴대폰을 가로로 돌리시면 더 크게 볼 수 있습니다.
+</div>
+
+<script>
+(function() {
+    const wrapper = document.getElementById('map-wrapper');
+    const isCqiSupported = CSS.supports('container-type', 'inline-size');
+    const unit = isCqiSupported ? 'cqi' : 'vw';
+
+    // ==========================================
+    // 1️⃣ [핀 + 텍스트] 장소 마커 데이터
+    // ==========================================
+    const placeMarkers = [
+        { text: "종합<br>안내센터", x: 54.8285, y: 58.5631, textOffsetX: 5, textOffsetY: -2, pinColor: "#000000", bgColor: "rgba(0, 0, 0, 0.8)", size: 1.3 },
+                
+        // 화장실
+        { text: "화장실", x: 5.3935, y: 85.7466, textOffsetX: 0, textOffsetY: -6, pinColor: "#007bff", bgColor: "rgba(0, 123, 255, 0.8)", size: 1.3 },   
+        { text: "화장실", x: 38.5685, y: 86.8218, textOffsetX: 0, textOffsetY: -6, pinColor: "#007bff", bgColor: "rgba(0, 123, 255, 0.8)", size: 1.3 },   
+        { text: "화장실", x: 48.1771, y: 74.9714, textOffsetX: -4, textOffsetY: -2.5, pinColor: "#007bff", bgColor: "rgba(0, 123, 255, 0.8)", size: 1.3 },   
+        { text: "화장실", x: 54.4115, y: 57.9851, textOffsetX: 0, textOffsetY: -6, pinColor: "#007bff", bgColor: "rgba(0, 123, 255, 0.8)", size: 1.3 },   
+        { text: "화장실", x: 58.3786, y: 13.7036, textOffsetX: 0, textOffsetY: -6, pinColor: "#007bff", bgColor: "rgba(0, 123, 255, 0.8)", size: 1.3 },   
+        { text: "화장실", x: 51.2551, y: 2.4527, textOffsetX: 3.3, textOffsetY: 0, pinColor: "#007bff", bgColor: "rgba(0, 123, 255, 0.8)", size: 1.3 },   
+
+        { text: "화장실", x: 8.7336, y: 19.7551, textOffsetX: 0, textOffsetY: -6, pinColor: "#007bff", bgColor: "rgba(0, 123, 255, 0.8)", size: 1.3 },   
+        { text: "화장실", x: 18.6389, y: 49.7653, textOffsetX: 0, textOffsetY: -6, pinColor: "#007bff", bgColor: "rgba(0, 123, 255, 0.8)", size: 1.3 },   
+        { text: "화장실", x: 28.1371, y: 11.3483, textOffsetX: 0, textOffsetY: -6, pinColor: "#007bff", bgColor: "rgba(0, 123, 255, 0.8)", size: 1.3 },   
+
+        { text: "화장실", x: 82.2768, y: 14.3786, textOffsetX: 0, textOffsetY: -6, pinColor: "#007bff", bgColor: "rgba(0, 123, 255, 0.8)", size: 1.3 },   
+        { text: "화장실", x: 67.9617, y: 55.2395, textOffsetX: 0, textOffsetY: -6, pinColor: "#007bff", bgColor: "rgba(0, 123, 255, 0.8)", size: 1.3 },   
+
+        // 편의시설
+        { text: "카페 브람스", x: 17.7569, y: 86.3517, textOffsetX: 0, textOffsetY: -6, pinColor: "#ff9900", bgColor: "rgba(235, 171, 0, 0.8)", size: 1.3 },
+        { text: "편의점&카페<br>자전거대여소", x: 49.9829, y: 76.7719, textOffsetX: 5, textOffsetY: -3, pinColor: "#ff9900", bgColor: "rgba(235, 171, 0, 0.8)", size: 1.2 },
+        { text: "힐링카페 숲이랑", x: 75.2210 , y: 62.9887, textOffsetX: 6.2, textOffsetY: -3.5, pinColor: "#ff9900", bgColor: "rgba(235, 171, 0, 0.8)", size: 1.3 },
+        { text: "매점", x: 82.8874 , y: 15.0629, textOffsetX: 3, textOffsetY: -3.5, pinColor: "#ff9900", bgColor: "rgba(235, 171, 0, 0.8)", size: 1.3 },
+        { text: "매점", x: 69.0472 , y: 55.4350, textOffsetX: 3, textOffsetY: -3.5, pinColor: "#ff9900", bgColor: "rgba(235, 171, 0, 0.8)", size: 1.3 }
+    ];
+
+    // ==========================================
+    // 2️⃣ [텍스트 전용] 구역 이름 / 라벨 마커 데이터
+    // ==========================================
+    const textOnlyMarkers = [
+        { text: "미디어큐브동", x: 49.2198, y: 78.8937, bgColor: "rgba(0, 0, 0, 0.8)", size: 1.3 },
+        { text: "주차센터", x: 44.2673, y: 90.4387, bgColor: "rgba(0, 0, 0, 0.8)", size: 1.2 },
+        { text: "동원입구", x: 56.1225, y: 34.6224, bgColor: "rgba(0, 0, 0, 0.8)", size: 1.2 },
+        { text: "서원입구", x: 42.0001, y: 34.6224, bgColor: "rgba(0, 0, 0, 0.8)", size: 1.2 },
+        { text: "시민광장", x: 49.6269, y: 45.8639, bgColor: "rgba(0, 0, 0, 0.8)", size: 1.3 },
+        { text: "이응노미술관", x: 40.6716, y: 65.5007, bgColor: "rgba(0, 0, 0, 0.8)", size: 1.3 },
+        { text: "대전시립미술관", x: 29.6811, y: 65.1422, bgColor: "rgba(0, 0, 0, 0.8)", size: 1.3 },
+        { text: "대전예술의전당", x: 12.3813, y: 72.4523, bgColor: "rgba(0, 0, 0, 0.8)", size: 1.3 },
+        { text: "평송청소년문화센터", x: 82.9976, y: 83.0095, bgColor: "rgba(0, 0, 0, 0.8)", size: 1.3 },
+        { text: "열대식물원", x: 74.4573, y: 70.7906, bgColor: "rgba(0, 0, 0, 0.8)", size: 1.3 },
+        { text: "한밭수목원<br>연구관리동", x: 70.1079, y: 60.2862, bgColor: "rgba(0, 0, 0, 0.8)", size: 1.3 },
+        { text: "천연기념물센터", x: 88.7042, y: 50.8492, bgColor: "rgba(0, 0, 0, 0.8)", size: 1.3 },
+        { text: "어린이 놀이터", x: 58.2748, y: 47.2855, bgColor: "rgba(0, 0, 0, 0.8)", size: 1.4 },   
+        { text: "대전시립연정국악원", x: 60.2605, y: 79.5804, bgColor: "rgba(0, 0, 0, 0.8)", size: 1.3 },
+        { text: "곤충생태관", x: 64.2809, y: 65.7075, bgColor: "rgba(0, 0, 0, 0.8)", size: 1.3 },
+        { text: "원형광장", x: 49.1688, y: 12.5213, bgColor: "rgba(0, 0, 0, 0.8)", size: 1.3 },
+        
+        { text: "한밭수목원 동원", x: 73.7788, y: 38.1415, bgColor: "rgba(0, 0, 0, 0.8)", size: 2.0 },
+        { text: "한밭수목원 서원", x: 23.5075, y: 38.1415, bgColor: "rgba(0, 0, 0, 0.8)", size: 2.0 },
+
+        // 주차장 (녹색)
+        { text: "1주차장", x: 61.3636, y: 88.4836, bgColor: "rgba(40, 167, 69, 0.8)", size: 1.8 },
+        { text: "2주차장", x: 32.3799, y: 88.4836, bgColor: "rgba(40, 167, 69, 0.8)", size: 1.8 },
+
+        // 게이트 (빨간색)
+        { text: "1게이트", x: 70.7938, y: 95.0330, bgColor: "rgba(220, 53, 69, 0.8)", size: 1.2 },
+        { text: "2게이트", x: 52.9512, y: 95.0330, bgColor: "rgba(220, 53, 69, 0.8)", size: 1.2 },
+        { text: "3게이트", x: 45.6242, y: 95.0330, bgColor: "rgba(220, 53, 69, 0.8)", size: 1.2 },
+        { text: "4게이트", x: 27.1031, y: 95.0330, bgColor: "rgba(220, 53, 69, 0.8)", size: 1.2 },
+        { text: "5게이트", x: 3.2904, y: 95.0330,  bgColor: "rgba(220, 53, 69, 0.8)", size: 1.2 }                    
+    ];
+
+    // --- 핀 마커 생성 렌더링 ---
+    placeMarkers.forEach(label => {
+        const pinIcon = document.createElement('div');
+        pinIcon.className = 'place-pin-icon';
+        pinIcon.style.left = label.x + '%';
+        pinIcon.style.top = label.y + '%';
+        const pColor = label.pinColor || "#000000";
+        pinIcon.innerHTML = `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" fill="${pColor}" stroke="white" stroke-width="1.5"/><circle cx="12" cy="9.2" r="3.5" fill="#ffffff"/></svg>`;
+        wrapper.appendChild(pinIcon);
+
+        const labelDiv = document.createElement('div');
+        labelDiv.className = 'map-label';
+        labelDiv.innerHTML = label.text;
+        labelDiv.style.backgroundColor = label.bgColor || "rgba(0,0,0,0.4)";
+        labelDiv.style.setProperty('--label-size', (label.size || 1.6) + unit);
+
+        const textX = label.x + (label.textOffsetX || 0);
+        const textY = label.y + (label.textOffsetY || 0);
+        
+        labelDiv.style.left = textX + '%';
+        labelDiv.style.top = textY + '%';
+        wrapper.appendChild(labelDiv);
+    });
+
+    // --- 텍스트 전용 마커 렌더링 ---
+    textOnlyMarkers.forEach(label => {
+        const labelDiv = document.createElement('div');
+        labelDiv.className = 'map-label';
+        labelDiv.innerHTML = label.text;
+        labelDiv.style.backgroundColor = label.bgColor || "rgba(0,0,0,0.4)";
+        labelDiv.style.setProperty('--label-size', (label.size || 1.6) + unit);
+        
+        labelDiv.style.left = label.x + '%';
+        labelDiv.style.top = label.y + '%';
+        wrapper.appendChild(labelDiv);
+    });
+
+    // ==========================================
+    // GPS 위치 추적 로직
+    // ==========================================
+    const pin = document.getElementById('user-pin');
+    const toast = document.getElementById('toast');
+    let lastLat = null; let lastLng = null;
+
+    const pts = [
+        { lat: 36.370962, lng: 127.382746, x: 2.6834,  y: 1.8741  },
+        { lat: 36.370470, lng: 127.393335, x: 96.0066,  y: 9.6069 },
+        { lat: 36.365067, lng: 127.393368, x: 96.9010,  y: 95.0972  },
+        { lat: 36.365093, lng: 127.382920, x: 3.8760,   y: 94.2380 }
+    ];
+
+    const triangles = [[0, 1, 3], [1, 2, 3]];
+
+    function getWeights(p, a, b, c) {
+        const det = (b.lat - c.lat) * (a.lng - c.lng) + (c.lng - b.lng) * (a.lat - c.lat);
+        if(det === 0) return null;
+        const w1 = ((b.lat - c.lat) * (p.lng - c.lng) + (c.lng - b.lng) * (p.lat - c.lat)) / det;
+        const w2 = ((c.lat - a.lat) * (p.lng - c.lng) + (a.lng - c.lng) * (p.lat - c.lat)) / det;
+        return {w1, w2, w3: 1 - w1 - w2};
+    }
+
+    function calculateMapPosition(currentLat, currentLng) {
+        const p = { lat: currentLat, lng: currentLng };
+        let bestWeights = null; let bestTriangle = null; let maxMinWeight = -Infinity;
+
+        for (let i = 0; i < triangles.length; i++) {
+            const A = pts[triangles[i][0]], B = pts[triangles[i][1]], C = pts[triangles[i][2]];
+            const w = getWeights(p, A, B, C); if(!w) continue;
+            const minW = Math.min(w.w1, w.w2, w.w3);
+            if (minW >= -0.05) { bestTriangle = triangles[i]; bestWeights = w; break; }
+            if (minW > maxMinWeight) { maxMinWeight = minW; bestTriangle = triangles[i]; bestWeights = w; }
+        }
+        if (!bestTriangle) return null;
+
+        const A = pts[bestTriangle[0]], B = pts[bestTriangle[1]], C = pts[bestTriangle[2]];
+        const fixedOffsetX = 0.2, fixedOffsetY = -0.1;
+        let fx = (bestWeights.w1 * A.x + bestWeights.w2 * B.x + bestWeights.w3 * C.x) + fixedOffsetX;
+        let fy = (bestWeights.w1 * A.y + bestWeights.w2 * B.y + bestWeights.w3 * C.y) + fixedOffsetY;
+        return { x: Math.max(0, Math.min(100, fx)), y: Math.max(0, Math.min(100, fy)) };
+    }
+
+    function updatePin() {
+        if (!lastLat || !lastLng) return;
+        const pos = calculateMapPosition(lastLat, lastLng);
+        if (pos) {
+            pin.style.left = pos.x + '%'; pin.style.top = pos.y + '%';
+            pin.style.display = 'block';
+            toast.style.opacity = '0'; setTimeout(() => toast.style.display = 'none', 500);
+        }
+    }
+
+    if (navigator.geolocation) {
+        navigator.geolocation.watchPosition(
+            p => { lastLat = p.coords.latitude; lastLng = p.coords.longitude; updatePin(); },
+            e => { toast.innerText = "⚠️ GPS 연결 실패"; toast.style.background = "rgba(220, 53, 69, 0.9)"; },
+            { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 }
+        );
+    }
+})();
+</script>
+
+</body>
+</html>
