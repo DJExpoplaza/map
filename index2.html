@@ -111,30 +111,7 @@
     //   (예: offsetX: 2, offsetY: -3 이면 핀의 우측 상단 대각선으로 글자가 이동함)
     
     const placeMarkers = [
-        // 핀 바로 위로 텍스트 올리기 (offsetY를 -3.5 정도로 설정)
-        { text: "미디어큐브동", x: 49.2198, y: 75.8937, textOffsetX: 0, textOffsetY: -6.5, pinColor: "#000000", bgColor: "rgba(0, 0, 0, 0.8)", size: 1.4 },
-        { text: "주차센터", x: 44.2673, y: 90.4387, textOffsetX: 4.5, textOffsetY: -3, pinColor: "#000000", bgColor: "rgba(0, 0, 0, 0.8)", size: 1.4 },
-        { text: "동원입구", x: 53.2225, y: 34.6224, textOffsetX: 4.5, textOffsetY: -3, pinColor: "#000000", bgColor: "rgba(0, 0, 0, 0.8)", size: 1.4 },
-        { text: "서원입구", x: 44.8100, y: 34.6224, textOffsetX: -4.5, textOffsetY: -3, pinColor: "#000000", bgColor: "rgba(0, 0, 0, 0.8)", size: 1.4 },
-        { text: "시민광장", x: 49.6269, y: 45.8639, textOffsetX: 0, textOffsetY: -6.5, pinColor: "#000000", bgColor: "rgba(0, 0, 0, 0.8)", size: 1.4 },
-                
-        // 핀 좌측 대각선 위로 텍스트 배치 (offsetX를 -로, offsetY를 -로)
-        { text: "이응노미술관", x: 40.6716, y: 66.0007, textOffsetX: 0, textOffsetY: -6.5, pinColor: "#000000", bgColor: "rgba(0, 0, 0, 0.8)", size: 1.4 },
-        
-        // 핀 우측 옆으로 텍스트 배치
-        { text: "대전시립미술관", x: 29.6811, y: 64.6422, textOffsetX: 0, textOffsetY: -6.5, pinColor: "#000000", bgColor: "rgba(0, 0, 0, 0.8)", size: 1.4 },
-        { text: "대전예술의전당", x: 12.3813, y: 72.4523, textOffsetX: 0, textOffsetY: -6.5, pinColor: "#000000", bgColor: "rgba(0, 0, 0, 0.8)", size: 1.4 },
-        { text: "평송청소년문화센터", x: 82.9976, y: 83.0095, textOffsetX: 0, textOffsetY: -6.5, pinColor: "#000000", bgColor: "rgba(0, 0, 0, 0.8)", size: 1.4 },
-        { text: "열대식물원", x: 74.4573, y: 70.7906, textOffsetX: 4.5, textOffsetY: -6, pinColor: "#000000", bgColor: "rgba(0, 0, 0, 0.8)", size: 1.4 },
-        { text: "한밭수목원 연구관리동", x: 71.6079, y: 62.2862, textOffsetX: 4.5, textOffsetY: -6.5, pinColor: "#000000", bgColor: "rgba(0, 0, 0, 0.8)", size: 1.4 },
-        { text: "천연기념물센터", x: 88.7042, y: 50.8492, textOffsetX: 0, textOffsetY: -6.5, pinColor: "#000000", bgColor: "rgba(0, 0, 0, 0.8)", size: 1.4 },
-        { text: "종합안내센터", x: 55.0543, y: 57.8873, textOffsetX: 6, textOffsetY: -2.5, pinColor: "#000000", bgColor: "rgba(0, 0, 0, 0.8)", size: 1.4 },   
-        { text: "어린이 놀이터", x: 55.2748, y: 49.2855, textOffsetX: 3.5, textOffsetY: -6.3, pinColor: "#000000", bgColor: "rgba(0, 0, 0, 0.8)", size: 1.4 },   
-        
-        // 핀 아래로 텍스트 배치 (offsetY를 +로 설정)
-        { text: "대전시립연정국악원", x: 59.2605, y: 75.5804, textOffsetX: 2, textOffsetY: -6.5, pinColor: "#000000", bgColor: "rgba(0, 0, 0, 0.8)", size: 1.4 },
-        { text: "곤충생태관", x: 64.2809, y: 65.7075, textOffsetX: 0, textOffsetY: -6.5, pinColor: "#000000", bgColor: "rgba(0, 0, 0, 0.8)", size: 1.4 },
-                    
+
         // 화장실
         { text: "화장실", x: 5.3935, y: 85.7466, textOffsetX: 0, textOffsetY: -6.5, pinColor: "#007bff", bgColor: "rgba(0, 123, 255, 0.8)", size: 1.3 },   //예술의전당 앞
         { text: "화장실", x: 38.5685, y: 86.8218, textOffsetX: 0, textOffsetY: -6.5, pinColor: "#007bff", bgColor: "rgba(0, 123, 255, 0.8)", size: 1.3 },   //시립미술관 앞
@@ -166,7 +143,26 @@
     // * 핀이 없이 글자만 맵 위에 떠 있습니다. 구역 명칭을 적을 때 유용합니다.
     
     const textOnlyMarkers = [
-               
+
+        { text: "미디어큐브동", x: 49.2198, y: 75.8937, bgColor: "rgba(0, 0, 0, 0.8)", size: 1.4 },
+        { text: "주차센터", x: 44.2673, y: 90.4387, bgColor: "rgba(0, 0, 0, 0.8)", size: 1.4 },
+        { text: "동원입구", x: 53.2225, y: 34.6224, bgColor: "rgba(0, 0, 0, 0.8)", size: 1.4 },
+        { text: "서원입구", x: 44.8100, y: 34.6224, tbgColor: "rgba(0, 0, 0, 0.8)", size: 1.4 },
+        { text: "시민광장", x: 49.6269, y: 45.8639, bgColor: "rgba(0, 0, 0, 0.8)", size: 1.4 },
+        { text: "이응노미술관", x: 40.6716, y: 66.0007, bgColor: "rgba(0, 0, 0, 0.8)", size: 1.4 },
+        { text: "대전시립미술관", x: 29.6811, y: 64.6422, bgColor: "rgba(0, 0, 0, 0.8)", size: 1.4 },
+        { text: "대전예술의전당", x: 12.3813, y: 72.4523, bgColor: "rgba(0, 0, 0, 0.8)", size: 1.4 },
+        { text: "평송청소년문화센터", x: 82.9976, y: 83.0095, bgColor: "rgba(0, 0, 0, 0.8)", size: 1.4 },
+        { text: "열대식물원", x: 74.4573, y: 70.7906, bgColor: "rgba(0, 0, 0, 0.8)", size: 1.4 },
+        { text: "한밭수목원 연구관리동", x: 71.6079, y: 62.2862, bgColor: "rgba(0, 0, 0, 0.8)", size: 1.4 },
+        { text: "천연기념물센터", x: 88.7042, y: 50.8492, bgColor: "rgba(0, 0, 0, 0.8)", size: 1.4 },
+        { text: "종합안내센터", x: 55.0543, y: 57.8873, bgColor: "rgba(0, 0, 0, 0.8)", size: 1.4 },   
+        { text: "어린이 놀이터", x: 55.2748, y: 49.2855, bgColor: "rgba(0, 0, 0, 0.8)", size: 1.4 },   
+        { text: "대전시립연정국악원", x: 59.2605, y: 75.5804, bgColor: "rgba(0, 0, 0, 0.8)", size: 1.4 },
+        { text: "곤충생태관", x: 64.2809, y: 65.7075, bgColor: "rgba(0, 0, 0, 0.8)", size: 1.4 },
+
+
+        
         { text: "한밭수목원 동원", x: 73.7788, y: 38.1415, bgColor: "rgba(0, 0, 0, 0.8)", size: 2.0 },
         { text: "한밭수목원 서원", x: 23.5075, y: 38.1415, bgColor: "rgba(0, 0, 0, 0.8)", size: 2.0 },
         
