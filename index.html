@@ -278,10 +278,34 @@
 
     if (navigator.geolocation) {
         navigator.geolocation.watchPosition(
-            p => { lastLat = p.coords.latitude; lastLng = p.coords.longitude; updatePin(); },
-            e => { toast.innerText = "⚠️ GPS 연결 실패"; toast.style.background = "rgba(220, 53, 69, 0.9)"; },
-            { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 }
+            p => { 
+                lastLat = p.coords.latitude; 
+                lastLng = p.coords.longitude; 
+                updatePin(); 
+            },
+            e => { 
+                // 에러 코드에 따라 메시지 다르게 처리
+                if (e.code === 1) { // PERMISSION_DENIED (권한 거부)
+                    toast.innerHTML = "⚠️ 위치 권한이 차단되었습니다.<br>설정에서 권한을 허용해주세요.";
+                    toast.style.background = "rgba(220, 53, 69, 0.9)"; // 빨간색
+                } else if (e.code === 3) { // TIMEOUT (시간 초과)
+                    // 타임아웃은 백그라운드에서 계속 재시도하므로 에러로 띄우지 않고 대기 멘트로 유지
+                    toast.innerText = "📡 신호가 약합니다. 하늘이 보이는 곳으로 이동해주세요...";
+                } else { // 기타 에러
+                    toast.innerText = "⚠️ GPS 연결 실패 (" + e.message + ")";
+                    toast.style.background = "rgba(220, 53, 69, 0.9)";
+                }
+            },
+            { 
+                enableHighAccuracy: true, 
+                maximumAge: 0, 
+                timeout: 10000 // 5초(5000)에서 10초(10000)로 대기 시간 연장
+            }
         );
+    } else {
+        toast.innerText = "⚠️ 이 브라우저는 GPS를 지원하지 않습니다.";
+        toast.style.background = "rgba(220, 53, 69, 0.9)";
+    }
     }
 })();
 </script>
