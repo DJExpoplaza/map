@@ -209,7 +209,7 @@
     textOnlyMarkers.forEach(label => {
         const labelDiv = document.createElement('div');
         labelDiv.className = 'map-label';
-        labelDiv.innerText = label.text;
+        labelDiv.innerHTML = label.text;
         labelDiv.style.backgroundColor = label.bgColor || "rgba(0,0,0,0.4)";
         labelDiv.style.setProperty('--label-size', (label.size || 1.6) + unit);
         
