@@ -280,7 +280,7 @@
         navigator.geolocation.watchPosition(
             p => { lastLat = p.coords.latitude; lastLng = p.coords.longitude; updatePin(); },
             e => { toast.innerText = "⚠️ GPS 연결 실패"; toast.style.background = "rgba(220, 53, 69, 0.9)"; },
-            { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 }
+            { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
         );
     }
 })();
