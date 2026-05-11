@@ -7,7 +7,6 @@
     <style>
         body { margin: 0; padding: 0; background-color: #000; overflow-x: hidden; font-family: 'Pretendard', sans-serif; }
         
-        /* 🔥 맵 컨테이너에 컨테이너 쿼리 적용 (가로 폭 기준 스케일링) */
         #map-wrapper { 
             position: relative; width: 100%; display: block; overflow: hidden; 
             container-type: inline-size; 
@@ -22,42 +21,52 @@
             transition: opacity 0.5s ease;
         }
 
-        /* 🏷️ 맵 텍스트 라벨 (비율 반응형 + 블러 효과 적용) */
-        .map-label {
+        /* 🏷️ 장소 마커 전체 컨테이너 */
+        .place-marker {
             position: absolute;
-            transform: translate(-50%, -50%);
-            color: #ffffff;
-            
-            font-size: 1.6cqi; 
-            padding: 0.3cqi 0.6cqi; 
-            border-radius: 0.3cqi; 
-            
-            font-weight: bold;
-            white-space: nowrap;
+            transform: translate(-50%, -100%); /* 핀 끝이 좌표에 오도록 */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            z-index: 400;
             pointer-events: none;
-            box-shadow: 0 0.5cqi 1cqi rgba(0,0,0,0.5);
-
-            /* 🔥 해결책 1, 2 적용: z-index를 핀(500)보다 높이고, 배경에 블러 처리 */
-            z-index: 600; 
-            backdrop-filter: blur(4px);
-            -webkit-backdrop-filter: blur(4px);
         }
 
-        /* 📍 투명한 앵커 */
+        /* 🏷️ 장소 텍스트 라벨 */
+        .map-label {
+            color: #ffffff;
+            font-size: 1.6cqi; 
+            padding: 0.3cqi 0.8cqi; 
+            border-radius: 0.4cqi; 
+            font-weight: bold;
+            white-space: nowrap;
+            box-shadow: 0 0.5cqi 1cqi rgba(0,0,0,0.5);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            margin-bottom: 0.3cqi; /* 핀과의 간격 */
+            z-index: 600;
+        }
+
+        /* 📍 장소 아이콘 (핀 모양) */
+        .place-pin-icon {
+            width: 2.0cqi;
+            height: 2.0cqi;
+            filter: drop-shadow(0 0.2cqi 0.4cqi rgba(0,0,0,0.5));
+        }
+
+        /* 📍 내 위치 표시 앵커 */
         #user-pin {
             position: absolute; width: 0; height: 0;
-            display: none; z-index: 500; /* 핀은 텍스트(600) 밑으로 들어갑니다 */
+            display: none; z-index: 700; /* 내 위치는 모든 장소 마커보다 위 */
             transition: left 0.5s cubic-bezier(0.22, 1, 0.36, 1), top 0.5s cubic-bezier(0.22, 1, 0.36, 1);
         }
 
-        /* 🎨 핀 & 물결 애니메이션 */
+        /* 🎨 내 위치 핀 (보라색 그라데이션으로 변경) */
         .pin-body {
-            position: absolute; 
-            bottom: 0px; 
-            left: -1.8cqi;
-            width: 3.6cqi; 
-            height: 5.0cqi;
-            background-image: url('data:image/svg+xml;utf8,<svg viewBox="0 0 24 36" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="%23ff512f"/><stop offset="100%" stop-color="%23dd2476"/></linearGradient><filter id="ds" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="%23000" flood-opacity="0.5"/></filter></defs><path d="M12 0C5.373 0 0 5.373 0 12c0 9 12 24 12 24s12-15 12-24C24 5.373 18.627 0 12 0z" fill="url(%23g)" filter="url(%23ds)"/><circle cx="12" cy="12" r="4.5" fill="%23ffffff"/></svg>');
+            position: absolute; bottom: 0px; left: -1.8cqi;
+            width: 3.6cqi; height: 5.0cqi;
+            /* 보라색(Violet) 계열 그라데이션 적용 */
+            background-image: url('data:image/svg+xml;utf8,<svg viewBox="0 0 24 36" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="%238E2DE2"/><stop offset="100%" stop-color="%234A00E0"/></linearGradient><filter id="ds" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="%23000" flood-opacity="0.5"/></filter></defs><path d="M12 0C5.373 0 0 5.373 0 12c0 9 12 24 12 24s12-15 12-24C24 5.373 18.627 0 12 0z" fill="url(%23g)" filter="url(%23ds)"/><circle cx="12" cy="12" r="4.5" fill="%23ffffff"/></svg>');
             background-repeat: no-repeat;
             background-size: contain;
             transform-origin: bottom center;
@@ -65,12 +74,9 @@
         }
 
         .pin-pulse {
-            position: absolute; 
-            bottom: -0.6cqi; 
-            left: -1.4cqi;
-            width: 2.8cqi; 
-            height: 1.0cqi;
-            background: rgba(221, 36, 118, 0.8);
+            position: absolute; bottom: -0.6cqi; left: -1.4cqi;
+            width: 2.8cqi; height: 1.0cqi;
+            background: rgba(142, 45, 226, 0.6); /* 보라색 물결 */
             border-radius: 50%; z-index: -1;
             animation: pulsing 1.5s infinite ease-out;
         }
@@ -78,9 +84,9 @@
         @keyframes pulsing { 0% { transform: scale(0.5); opacity: 1; } 100% { transform: scale(2.0); opacity: 0; } }
         @keyframes bounceIn { 0% { transform: translateY(-2cqi) scale(0.8); opacity: 0; } 100% { transform: translateY(0) scale(1); opacity: 1; } }
 
-        /* 🔥 구형 기기 호환성을 위한 vw 폴백 */
         @supports not (container-type: inline-size) {
-            .map-label { font-size: 2.0vw; padding: 0.6vw 1.2vw; border-radius: 0.6vw; box-shadow: 0 0.5vw 1vw rgba(0,0,0,0.5); }
+            .map-label { font-size: 1.6vw; padding: 0.3vw 0.8vw; border-radius: 0.4vw; }
+            .place-pin-icon { width: 2.0vw; height: 2.0vw; }
             .pin-body { left: -1.8vw; width: 3.6vw; height: 5.0vw; }
             .pin-pulse { bottom: -0.6vw; left: -1.4vw; width: 2.8vw; height: 1.0vw; }
             @keyframes bounceIn { 0% { transform: translateY(-2vw) scale(0.8); opacity: 0; } 100% { transform: translateY(0) scale(1); opacity: 1; } }
@@ -102,53 +108,65 @@
 <script>
 (function() {
     // ==========================================
-    // 📝 맵 텍스트 라벨 데이터
+    // 📝 맵 텍스트 및 핀 데이터
     // ==========================================
     const mapLabels = [
-        { text: "미디어큐브동", x: 49.0417, y: 71.9913, bgColor: "rgba(0, 0, 0, 0.6)" },     //검은색
-        { text: "이응노미술관", x: 41.2744, y: 63.4492, bgColor: "rgba(0, 0, 0, 0.6)" },      //검은색
-        { text: "대전시립미술관", x: 29.6811, y: 62.0907, bgColor: "rgba(0, 0, 0, 0.6)" },      //검은색
-        { text: "대전예술의전당", x: 12.3813, y: 69.8130, bgColor: "rgba(0, 0, 0, 0.6)" },      //검은색
-        { text: "대전시립연정국악원", x: 59.2605, y: 75.5804, bgColor: "rgba(0, 0, 0, 0.6)" },      //검은색
-        { text: "평송청소년문화센터", x: 83.0054, y: 80.0770, bgColor: "rgba(0, 0, 0, 0.6)" },      //검은색
-        { text: "열대식물원", x: 73.0326, y: 70.8883, bgColor: "rgba(0, 0, 0, 0.6)" },      //검은색
-        { text: "곤충생태관", x: 64.2809, y: 64.0457, bgColor: "rgba(0, 0, 0, 0.6)" },      //검은색
-        { text: "종합안내센터", x: 55.5292, y: 58.1806, bgColor: "rgba(0, 0, 0, 0.6)" },      //검은색
-        { text: "한밭수목원 연구동", x: 72.5577, y: 59.6469, bgColor: "rgba(0, 0, 0, 0.6)" },      //검은색
-        { text: "천연기념물센터", x: 88.6364, y: 49.0897, bgColor: "rgba(0, 0, 0, 0.6)" },      //검은색
-        { text: "대전한밭수목원 동원", x: 73.7788, y: 38.1415, bgColor: "rgba(0, 0, 0, 0.6)" },      //검은색
-        { text: "동원 정문", x: 44.5115, y: 34.5242, bgColor: "rgba(0, 0, 0, 0.6)" },      //검은색
-        { text: "대전한반수목원 서원", x: 26.2212, y: 49.0897, bgColor: "rgba(0, 0, 0, 0.6)" },      //검은색
-        { text: "서원 정문", x: 44.5387, y: 34.5242, bgColor: "rgba(0, 0, 0, 0.6)" },      //검은색
-        { text: "1게이트", x: 70.7938, y: 94.5442, bgColor: "rgba(220, 53, 69, 0.6)" },     //적색
-        { text: "2게이트", x: 52.9512, y: 94.5442, bgColor: "rgba(220, 53, 69, 0.6)" },     //적색
-        { text: "3게이트", x: 45.6242, y: 94.5442, bgColor: "rgba(220, 53, 69, 0.6)" },     //적색
-        { text: "4게이트", x: 27.1031, y: 94.5442, bgColor: "rgba(220, 53, 69, 0.6)" },     //적색
-        { text: "5게이트", x: 3.2225, y: 94.5442, bgColor: "rgba(220, 53, 69, 0.6)" },     //적색
-        { text: "안내소", x: 80.0000, y: 50.0000, bgColor: "rgba(0, 123, 255, 0.6)" },        // 파란색    
-        { text: "푸드트럭 존", x: 20.0000, y: 40.0000, bgColor: "rgba(235, 171, 0, 0.6)" },   //노란색
-        { text: "안전 휴게소", x: 70.0000, y: 80.0000, bgColor: "rgba(40, 167, 69, 0.6)" }    //녹색
+        { text: "미디어큐브동", x: 49.0417, y: 71.9913, color: "rgba(0, 0, 0, 0.6)" },
+        { text: "이응노미술관", x: 41.2744, y: 63.4492, color: "rgba(0, 0, 0, 0.6)" },
+        { text: "대전시립미술관", x: 29.6811, y: 62.0907, color: "rgba(0, 0, 0, 0.6)" },
+        { text: "대전예술의전당", x: 12.3813, y: 69.8130, color: "rgba(0, 0, 0, 0.6)" },
+        { text: "대전시립연정국악원", x: 59.2605, y: 75.5804, color: "rgba(0, 0, 0, 0.6)" },
+        { text: "평송청소년문화센터", x: 83.0054, y: 80.0770, color: "rgba(0, 0, 0, 0.6)" },
+        { text: "열대식물원", x: 73.0326, y: 70.8883, color: "rgba(0, 0, 0, 0.6)" },
+        { text: "곤충생태관", x: 64.2809, y: 64.0457, color: "rgba(0, 0, 0, 0.6)" },
+        { text: "종합안내센터", x: 55.5292, y: 58.1806, color: "rgba(0, 0, 0, 0.6)" },
+        { text: "한밭수목원 연구동", x: 72.5577, y: 59.6469, color: "rgba(0, 0, 0, 0.6)" },
+        { text: "천연기념물센터", x: 88.6364, y: 49.0897, color: "rgba(0, 0, 0, 0.6)" },
+        { text: "대전한밭수목원 동원", x: 73.7788, y: 38.1415, color: "rgba(0, 0, 0, 0.6)" },
+        { text: "동원 정문", x: 44.5115, y: 34.5242, color: "rgba(0, 0, 0, 0.6)" },
+        { text: "대전한반수목원 서원", x: 26.2212, y: 49.0897, color: "rgba(0, 0, 0, 0.6)" },
+        { text: "서원 정문", x: 44.5387, y: 34.5242, color: "rgba(0, 0, 0, 0.6)" },
+        { text: "1게이트", x: 70.7938, y: 94.5442, color: "rgba(220, 53, 69, 0.6)" },
+        { text: "2게이트", x: 52.9512, y: 94.5442, color: "rgba(220, 53, 69, 0.6)" },
+        { text: "3게이트", x: 45.6242, y: 94.5442, color: "rgba(220, 53, 69, 0.6)" },
+        { text: "4게이트", x: 27.1031, y: 94.5442, color: "rgba(220, 53, 69, 0.6)" },
+        { text: "5게이트", x: 3.2225, y: 94.5442, color: "rgba(220, 53, 69, 0.6)" },
+        { text: "안내소", x: 80.0000, y: 50.0000, color: "rgba(0, 123, 255, 0.6)" },   
+        { text: "푸드트럭 존", x: 20.0000, y: 40.0000, color: "rgba(235, 171, 0, 0.6)" },
+        { text: "안전 휴게소", x: 70.0000, y: 80.0000, color: "rgba(40, 167, 69, 0.6)" }
     ];
 
     const wrapper = document.getElementById('map-wrapper');
+    
     mapLabels.forEach(label => {
+        const markerDiv = document.createElement('div');
+        markerDiv.className = 'place-marker';
+        markerDiv.style.left = label.x + '%';
+        markerDiv.style.top = label.y + '%';
+
+        // 텍스트 라벨 생성
         const labelDiv = document.createElement('div');
         labelDiv.className = 'map-label';
         labelDiv.innerText = label.text;
-        labelDiv.style.left = label.x + '%';
-        labelDiv.style.top = label.y + '%';
-        labelDiv.style.backgroundColor = label.bgColor || "rgba(0, 0, 0, 0.6)";
-        wrapper.appendChild(labelDiv);
+        labelDiv.style.backgroundColor = label.color;
+
+        // 장소 핀 아이콘 생성 (SVG)
+        const pinIcon = document.createElement('div');
+        pinIcon.className = 'place-pin-icon';
+        const hexColor = label.color.replace('rgba', 'rgb').replace(/,[^,]+\)$/, ')'); // 투명도 제거한 색상 추출
+        pinIcon.innerHTML = `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" fill="${label.color}" stroke="white" stroke-width="1.5"/></svg>`;
+
+        markerDiv.appendChild(labelDiv);
+        markerDiv.appendChild(pinIcon);
+        wrapper.appendChild(markerDiv);
     });
 
     // ==========================================
-    // 기존 GPS 위치 추적 로직
+    // GPS 위치 추적 로직 (보정값 적용)
     // ==========================================
     const pin = document.getElementById('user-pin');
     const toast = document.getElementById('toast');
-
-    let lastLat = null;
-    let lastLng = null;
+    let lastLat = null; let lastLng = null;
 
     const pts = [
         { lat: 36.370962, lng: 127.382746, x: 2.6834,  y: 1.8741  },
@@ -164,85 +182,48 @@
         if(det === 0) return null;
         const w1 = ((b.lat - c.lat) * (p.lng - c.lng) + (c.lng - b.lng) * (p.lat - c.lat)) / det;
         const w2 = ((c.lat - a.lat) * (p.lng - c.lng) + (a.lng - c.lng) * (p.lat - c.lat)) / det;
-        const w3 = 1 - w1 - w2;
-        return {w1, w2, w3};
+        return {w1, w2, w3: 1 - w1 - w2};
     }
 
     function calculateMapPosition(currentLat, currentLng) {
         const p = { lat: currentLat, lng: currentLng };
-        let bestWeights = null;
-        let bestTriangle = null;
-        let maxMinWeight = -Infinity;
+        let bestWeights = null; let bestTriangle = null; let maxMinWeight = -Infinity;
 
         for (let i = 0; i < triangles.length; i++) {
-            const A = pts[triangles[i][0]];
-            const B = pts[triangles[i][1]];
-            const C = pts[triangles[i][2]];
-            
-            const w = getWeights(p, A, B, C);
-            if(w === null) continue;
-
-            const minWeight = Math.min(w.w1, w.w2, w.w3);
-            if (minWeight >= -0.05) { 
-                bestTriangle = triangles[i]; bestWeights = w; break;
-            }
-            if (minWeight > maxMinWeight) {
-                maxMinWeight = minWeight; bestTriangle = triangles[i]; bestWeights = w;
-            }
+            const A = pts[triangles[i][0]], B = pts[triangles[i][1]], C = pts[triangles[i][2]];
+            const w = getWeights(p, A, B, C); if(!w) continue;
+            const minW = Math.min(w.w1, w.w2, w.w3);
+            if (minW >= -0.05) { bestTriangle = triangles[i]; bestWeights = w; break; }
+            if (minW > maxMinWeight) { maxMinWeight = minW; bestTriangle = triangles[i]; bestWeights = w; }
         }
-
         if (!bestTriangle) return null;
 
-        const A = pts[bestTriangle[0]];
-        const B = pts[bestTriangle[1]];
-        const C = pts[bestTriangle[2]];
-
-        const fixedOffsetX = 0.3;
-        const fixedOffsetY = -0.1;
-
-        let finalX = (bestWeights.w1 * A.x + bestWeights.w2 * B.x + bestWeights.w3 * C.x) + fixedOffsetX;
-        let finalY = (bestWeights.w1 * A.y + bestWeights.w2 * B.y + bestWeights.w3 * C.y) + fixedOffsetY;
-
-        finalX = Math.max(0, Math.min(100, finalX));
-        finalY = Math.max(0, Math.min(100, finalY));
-
-        return { x: finalX, y: finalY };
+        const A = pts[bestTriangle[0]], B = pts[bestTriangle[1]], C = pts[bestTriangle[2]];
+        const fixedOffsetX = 0.3, fixedOffsetY = -0.1;
+        let fx = (bestWeights.w1 * A.x + bestWeights.w2 * B.x + bestWeights.w3 * C.x) + fixedOffsetX;
+        let fy = (bestWeights.w1 * A.y + bestWeights.w2 * B.y + bestWeights.w3 * C.y) + fixedOffsetY;
+        return { x: Math.max(0, Math.min(100, fx)), y: Math.max(0, Math.min(100, fy)) };
     }
 
     function updatePin() {
         if (!lastLat || !lastLng) return;
-        const mapPos = calculateMapPosition(lastLat, lastLng);
-        
-        if (mapPos) {
-            pin.style.left = mapPos.x + '%';
-            pin.style.top = mapPos.y + '%';
+        const pos = calculateMapPosition(lastLat, lastLng);
+        if (pos) {
+            pin.style.left = pos.x + '%'; pin.style.top = pos.y + '%';
             pin.style.display = 'block';
-            
-            toast.style.opacity = '0';
-            setTimeout(() => toast.style.display = 'none', 500);
+            toast.style.opacity = '0'; setTimeout(() => toast.style.display = 'none', 500);
         }
     }
 
     if (navigator.geolocation) {
         navigator.geolocation.watchPosition(
-            function(pos) {
-                lastLat = pos.coords.latitude;
-                lastLng = pos.coords.longitude;
-                updatePin();
-            },
-            function(err) {
-                toast.innerText = "⚠️ GPS 신호를 잡을 수 없거나 권한이 거부되었습니다.";
-                toast.style.background = "rgba(220, 53, 69, 0.9)";
-            },
+            p => { lastLat = p.coords.latitude; lastLng = p.coords.longitude; updatePin(); },
+            e => { toast.innerText = "⚠️ GPS 연결 실패"; toast.style.background = "rgba(220, 53, 69, 0.9)"; },
             { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 }
         );
-    } else {
-        toast.innerText = "⚠️ 이 브라우저는 GPS를 지원하지 않습니다.";
-        toast.style.background = "rgba(220, 53, 69, 0.9)";
     }
 })();
 </script>
 
 </body>
 </html>
-
