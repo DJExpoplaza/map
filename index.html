@@ -24,7 +24,7 @@
         /* 🏷️ 장소 마커 전체 컨테이너 */
         .place-marker {
             position: absolute;
-            transform: translate(-50%, -100%); /* 핀 끝이 좌표에 오도록 */
+            transform: translate(-50%, -100%);
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -32,40 +32,42 @@
             pointer-events: none;
         }
 
-        /* 🏷️ 장소 텍스트 라벨 */
+        /* 🏷️ 장소 텍스트 라벨 (개별 글자 크기 변수 적용) */
         .map-label {
             color: #ffffff;
-            font-size: 1.6cqi; 
-            padding: 0.3cqi 0.8cqi; 
+            font-size: var(--label-size); /* JS에서 개별 주입된 크기 사용 */
+            padding: 0.2cqi 0.6cqi; 
             border-radius: 0.4cqi; 
             font-weight: bold;
             white-space: nowrap;
-            box-shadow: 0 0.5cqi 1cqi rgba(0,0,0,0.5);
-            backdrop-filter: blur(4px);
-            -webkit-backdrop-filter: blur(4px);
-            margin-bottom: 0.3cqi; /* 핀과의 간격 */
+            box-shadow: 0 0.2cqi 0.5cqi rgba(0,0,0,0.3);
+            
+            /* 블러(유리창) 효과를 아주 연하게 줄여 투명도를 살림 */
+            backdrop-filter: blur(2px);
+            -webkit-backdrop-filter: blur(2px);
+            
+            margin-bottom: 0.4cqi; 
             z-index: 600;
         }
 
-        /* 📍 장소 아이콘 (핀 모양) */
+        /* 📍 장소 아이콘 (핀 모양 - 크기 1.5배 확대) */
         .place-pin-icon {
-            width: 2.0cqi;
-            height: 2.0cqi;
+            width: 3.0cqi; /* 기존 2.0에서 3.0으로 확대 */
+            height: 3.0cqi;
             filter: drop-shadow(0 0.2cqi 0.4cqi rgba(0,0,0,0.5));
         }
 
         /* 📍 내 위치 표시 앵커 */
         #user-pin {
             position: absolute; width: 0; height: 0;
-            display: none; z-index: 700; /* 내 위치는 모든 장소 마커보다 위 */
+            display: none; z-index: 700;
             transition: left 0.5s cubic-bezier(0.22, 1, 0.36, 1), top 0.5s cubic-bezier(0.22, 1, 0.36, 1);
         }
 
-        /* 🎨 내 위치 핀 (보라색 그라데이션으로 변경) */
+        /* 🎨 내 위치 핀 (크기 0.8배 축소) */
         .pin-body {
-            position: absolute; bottom: 0px; left: -1.8cqi;
-            width: 3.6cqi; height: 5.0cqi;
-            /* 보라색(Violet) 계열 그라데이션 적용 */
+            position: absolute; bottom: 0px; left: -1.4cqi;
+            width: 2.8cqi; height: 4.0cqi; /* 기존 3.6, 5.0에서 축소 */
             background-image: url('data:image/svg+xml;utf8,<svg viewBox="0 0 24 36" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="%238E2DE2"/><stop offset="100%" stop-color="%234A00E0"/></linearGradient><filter id="ds" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="%23000" flood-opacity="0.5"/></filter></defs><path d="M12 0C5.373 0 0 5.373 0 12c0 9 12 24 12 24s12-15 12-24C24 5.373 18.627 0 12 0z" fill="url(%23g)" filter="url(%23ds)"/><circle cx="12" cy="12" r="4.5" fill="%23ffffff"/></svg>');
             background-repeat: no-repeat;
             background-size: contain;
@@ -74,9 +76,9 @@
         }
 
         .pin-pulse {
-            position: absolute; bottom: -0.6cqi; left: -1.4cqi;
-            width: 2.8cqi; height: 1.0cqi;
-            background: rgba(142, 45, 226, 0.6); /* 보라색 물결 */
+            position: absolute; bottom: -0.4cqi; left: -1.1cqi;
+            width: 2.2cqi; height: 0.8cqi; /* 기존 2.8, 1.0에서 축소 */
+            background: rgba(142, 45, 226, 0.6);
             border-radius: 50%; z-index: -1;
             animation: pulsing 1.5s infinite ease-out;
         }
@@ -84,11 +86,12 @@
         @keyframes pulsing { 0% { transform: scale(0.5); opacity: 1; } 100% { transform: scale(2.0); opacity: 0; } }
         @keyframes bounceIn { 0% { transform: translateY(-2cqi) scale(0.8); opacity: 0; } 100% { transform: translateY(0) scale(1); opacity: 1; } }
 
+        /* 🔥 구형 기기 호환성 (vw) */
         @supports not (container-type: inline-size) {
-            .map-label { font-size: 1.6vw; padding: 0.3vw 0.8vw; border-radius: 0.4vw; }
-            .place-pin-icon { width: 2.0vw; height: 2.0vw; }
-            .pin-body { left: -1.8vw; width: 3.6vw; height: 5.0vw; }
-            .pin-pulse { bottom: -0.6vw; left: -1.4vw; width: 2.8vw; height: 1.0vw; }
+            .map-label { padding: 0.2vw 0.6vw; border-radius: 0.4vw; }
+            .place-pin-icon { width: 3.0vw; height: 3.0vw; }
+            .pin-body { left: -1.4vw; width: 2.8vw; height: 4.0vw; }
+            .pin-pulse { bottom: -0.4vw; left: -1.1vw; width: 2.2vw; height: 0.8vw; }
             @keyframes bounceIn { 0% { transform: translateY(-2vw) scale(0.8); opacity: 0; } 100% { transform: translateY(0) scale(1); opacity: 1; } }
         }
     </style>
@@ -108,36 +111,39 @@
 <script>
 (function() {
     // ==========================================
-    // 📝 맵 텍스트 및 핀 데이터
+    // 📝 맵 텍스트 및 핀 데이터 설정
     // ==========================================
+    // pinColor: 지도에 꽂히는 핀의 색상 (불투명한 색상코드 사용 추천)
+    // bgColor: 텍스트 배경색 (rgba의 마지막 숫자를 0.1~0.3 정도로 낮춰야 아주 투명해집니다!)
+    // size: 글자 크기 (기본값은 1.6입니다. 숫자가 클수록 커집니다.)
+    
     const mapLabels = [
-        { text: "미디어큐브동", x: 49.0417, y: 71.9913, color: "rgba(0, 0, 0, 0.6)" },
-        { text: "이응노미술관", x: 41.2744, y: 63.4492, color: "rgba(0, 0, 0, 0.6)" },
-        { text: "대전시립미술관", x: 29.6811, y: 62.0907, color: "rgba(0, 0, 0, 0.6)" },
-        { text: "대전예술의전당", x: 12.3813, y: 69.8130, color: "rgba(0, 0, 0, 0.6)" },
-        { text: "대전시립연정국악원", x: 59.2605, y: 75.5804, color: "rgba(0, 0, 0, 0.6)" },
-        { text: "평송청소년문화센터", x: 83.0054, y: 80.0770, color: "rgba(0, 0, 0, 0.6)" },
-        { text: "열대식물원", x: 73.0326, y: 70.8883, color: "rgba(0, 0, 0, 0.6)" },
-        { text: "곤충생태관", x: 64.2809, y: 64.0457, color: "rgba(0, 0, 0, 0.6)" },
-        { text: "종합안내센터", x: 55.5292, y: 58.1806, color: "rgba(0, 0, 0, 0.6)" },
-        { text: "한밭수목원 연구동", x: 72.5577, y: 59.6469, color: "rgba(0, 0, 0, 0.6)" },
-        { text: "천연기념물센터", x: 88.6364, y: 49.0897, color: "rgba(0, 0, 0, 0.6)" },
-        { text: "대전한밭수목원 동원", x: 73.7788, y: 38.1415, color: "rgba(0, 0, 0, 0.6)" },
-        { text: "동원 정문", x: 44.5115, y: 34.5242, color: "rgba(0, 0, 0, 0.6)" },
-        { text: "대전한반수목원 서원", x: 26.2212, y: 49.0897, color: "rgba(0, 0, 0, 0.6)" },
-        { text: "서원 정문", x: 44.5387, y: 34.5242, color: "rgba(0, 0, 0, 0.6)" },
-        { text: "1게이트", x: 70.7938, y: 94.5442, color: "rgba(220, 53, 69, 0.6)" },
-        { text: "2게이트", x: 52.9512, y: 94.5442, color: "rgba(220, 53, 69, 0.6)" },
-        { text: "3게이트", x: 45.6242, y: 94.5442, color: "rgba(220, 53, 69, 0.6)" },
-        { text: "4게이트", x: 27.1031, y: 94.5442, color: "rgba(220, 53, 69, 0.6)" },
-        { text: "5게이트", x: 3.2225, y: 94.5442, color: "rgba(220, 53, 69, 0.6)" },
-        { text: "안내소", x: 80.0000, y: 50.0000, color: "rgba(0, 123, 255, 0.6)" },   
-        { text: "푸드트럭 존", x: 20.0000, y: 40.0000, color: "rgba(235, 171, 0, 0.6)" },
-        { text: "안전 휴게소", x: 70.0000, y: 80.0000, color: "rgba(40, 167, 69, 0.6)" }
+        // 주요 시설 (글자 크기 1.8로 약간 크게)
+        { text: "미디어큐브동", x: 49.0417, y: 71.9913, pinColor: "#000000", bgColor: "rgba(0, 0, 0, 0.2)", size: 1.8 },
+        { text: "이응노미술관", x: 41.2744, y: 63.4492, pinColor: "#000000", bgColor: "rgba(0, 0, 0, 0.2)", size: 1.8 },
+        { text: "대전시립미술관", x: 29.6811, y: 62.0907, pinColor: "#000000", bgColor: "rgba(0, 0, 0, 0.2)", size: 1.8 },
+        
+        // 일반 시설 (글자 크기 1.4로 약간 작게)
+        { text: "대전예술의전당", x: 12.3813, y: 69.8130, pinColor: "#000000", bgColor: "rgba(0, 0, 0, 0.2)", size: 1.4 },
+        { text: "대전시립연정국악원", x: 59.2605, y: 75.5804, pinColor: "#000000", bgColor: "rgba(0, 0, 0, 0.2)", size: 1.4 },
+        
+        // 게이트 (빨간색 계열, 글자 1.3으로 앙증맞게)
+        { text: "1게이트", x: 70.7938, y: 94.5442, pinColor: "#dc3545", bgColor: "rgba(220, 53, 69, 0.2)", size: 1.3 },
+        { text: "2게이트", x: 52.9512, y: 94.5442, pinColor: "#dc3545", bgColor: "rgba(220, 53, 69, 0.2)", size: 1.3 },
+        { text: "3게이트", x: 45.6242, y: 94.5442, pinColor: "#dc3545", bgColor: "rgba(220, 53, 69, 0.2)", size: 1.3 },
+        
+        // 특별 구역 (색상별 매칭)
+        { text: "안내소", x: 80.0000, y: 50.0000, pinColor: "#007bff", bgColor: "rgba(0, 123, 255, 0.2)", size: 1.5 },   
+        { text: "푸드트럭 존", x: 20.0000, y: 40.0000, pinColor: "#ff9900", bgColor: "rgba(235, 171, 0, 0.2)", size: 1.5 },
+        { text: "안전 휴게소", x: 70.0000, y: 80.0000, pinColor: "#28a745", bgColor: "rgba(40, 167, 69, 0.2)", size: 1.5 }
     ];
 
     const wrapper = document.getElementById('map-wrapper');
     
+    // CSS 변수 지원 여부 확인용 (cqi vs vw 폴백)
+    const isCqiSupported = CSS.supports('container-type', 'inline-size');
+    const unit = isCqiSupported ? 'cqi' : 'vw';
+
     mapLabels.forEach(label => {
         const markerDiv = document.createElement('div');
         markerDiv.className = 'place-marker';
@@ -148,13 +154,17 @@
         const labelDiv = document.createElement('div');
         labelDiv.className = 'map-label';
         labelDiv.innerText = label.text;
-        labelDiv.style.backgroundColor = label.color;
+        labelDiv.style.backgroundColor = label.bgColor || "rgba(0,0,0,0.2)";
+        
+        // 개별 글자 크기 변수 주입 (기본값 1.6)
+        const fontSize = label.size || 1.6;
+        labelDiv.style.setProperty('--label-size', fontSize + unit);
 
-        // 장소 핀 아이콘 생성 (SVG)
+        // 장소 핀 아이콘 생성 (SVG) - 흰색 센터 구멍(circle) 추가됨
         const pinIcon = document.createElement('div');
         pinIcon.className = 'place-pin-icon';
-        const hexColor = label.color.replace('rgba', 'rgb').replace(/,[^,]+\)$/, ')'); // 투명도 제거한 색상 추출
-        pinIcon.innerHTML = `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" fill="${label.color}" stroke="white" stroke-width="1.5"/></svg>`;
+        const pColor = label.pinColor || "#000000";
+        pinIcon.innerHTML = `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" fill="${pColor}" stroke="white" stroke-width="1.5"/><circle cx="12" cy="9" r="3.5" fill="#ffffff"/></svg>`;
 
         markerDiv.appendChild(labelDiv);
         markerDiv.appendChild(pinIcon);
@@ -162,7 +172,7 @@
     });
 
     // ==========================================
-    // GPS 위치 추적 로직 (보정값 적용)
+    // GPS 위치 추적 로직
     // ==========================================
     const pin = document.getElementById('user-pin');
     const toast = document.getElementById('toast');
