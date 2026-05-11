@@ -21,26 +21,26 @@
             transition: opacity 0.5s ease;
         }
 
-        /* 🏷️ 장소 텍스트 라벨 (핀과 완전 분리됨) */
+        /* 🏷️ 텍스트 라벨 공통 스타일 */
         .map-label {
             position: absolute;
+            transform: translate(-50%, -50%); /* 중심점 기준 정렬 */
             color: #ffffff;
-            font-size: var(--label-size); /* 개별 글자 크기 반영 */
+            font-size: var(--label-size); 
             padding: 0.2cqi 0.6cqi; 
             border-radius: 0.4cqi; 
             font-weight: bold;
             white-space: nowrap;
             box-shadow: 0 0.2cqi 0.5cqi rgba(0,0,0,0.3);
-            /* 블러(Blur) 효과를 완전히 제거하여 투명도를 맑게 살림 */
             z-index: 600;
             pointer-events: none;
         }
 
-        /* 📍 장소 아이콘 (핀 모양 - 크기 1.5배 확대 및 중앙 구멍 타공) */
+        /* 📍 장소 아이콘 (핀 모양) */
         .place-pin-icon {
             position: absolute;
-            transform: translate(-50%, -100%);
-            width: 3.0cqi; /* 2.0에서 3.0으로 확대 */
+            transform: translate(-50%, -100%); /* 뾰족한 끝이 좌표에 오도록 설정 */
+            width: 3.0cqi; 
             height: 3.0cqi;
             filter: drop-shadow(0 0.2cqi 0.4cqi rgba(0,0,0,0.5));
             z-index: 400;
@@ -54,10 +54,10 @@
             transition: left 0.5s cubic-bezier(0.22, 1, 0.36, 1), top 0.5s cubic-bezier(0.22, 1, 0.36, 1);
         }
 
-        /* 🎨 내 위치 핀 (크기 0.8배 축소) */
+        /* 🎨 내 위치 핀 (보라색 물방울) */
         .pin-body {
             position: absolute; bottom: 0px; left: -1.4cqi;
-            width: 2.8cqi; height: 4.0cqi; /* 3.6, 5.0에서 축소 */
+            width: 2.8cqi; height: 4.0cqi; 
             background-image: url('data:image/svg+xml;utf8,<svg viewBox="0 0 24 36" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="%238E2DE2"/><stop offset="100%" stop-color="%234A00E0"/></linearGradient><filter id="ds" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="%23000" flood-opacity="0.5"/></filter></defs><path d="M12 0C5.373 0 0 5.373 0 12c0 9 12 24 12 24s12-15 12-24C24 5.373 18.627 0 12 0z" fill="url(%23g)" filter="url(%23ds)"/><circle cx="12" cy="12" r="4.5" fill="%23ffffff"/></svg>');
             background-repeat: no-repeat;
             background-size: contain;
@@ -99,114 +99,98 @@
 
 <script>
 (function() {
-    // ==========================================
-    // 📝 맵 텍스트 및 핀 데이터 설정
-    // ==========================================
-    // * pos: "top", "bottom", "left", "right" 중 선택 (핀 기준 텍스트 위치)
-    // * size: 글자 크기 (기본값 1.6)
-    // * offsetX, offsetY: 글자 위치 미세 조정 (%)
-    // * noPin: true 추가 시 핀은 안 보이고 허공에 글자만 표시됨
-    
-    const mapLabels = [
-        // 주요 시설 (글자 크기 1.8) -> 좌우 상하 위치 분리 예시
-        { text: "미디어큐브동", x: 49.0417, y: 71.9913, pos: "top", pinColor: "#000000", bgColor: "rgba(0, 0, 0, 0.4)", size: 1.8 },
-        { text: "이응노미술관", x: 41.2744, y: 63.4492, pos: "left", pinColor: "#000000", bgColor: "rgba(0, 0, 0, 0.4)", size: 1.8 },
-        { text: "대전시립미술관", x: 29.6811, y: 62.0907, pos: "right", pinColor: "#000000", bgColor: "rgba(0, 0, 0, 0.4)", size: 1.8 },
-        { text: "대전예술의전당", x: 12.3813, y: 69.8130, pos: "top", pinColor: "#000000", bgColor: "rgba(0, 0, 0, 0.4)", size: 1.4 },
-        
-        // 핀 아래(bottom)에 텍스트가 표시되는 예시
-        { text: "대전시립연정국악원", x: 59.2605, y: 75.5804, pos: "bottom", pinColor: "#000000", bgColor: "rgba(0, 0, 0, 0.4)", size: 1.4 },
-        { text: "평송청소년문화센터", x: 83.0054, y: 80.0770, pos: "bottom", pinColor: "#000000", bgColor: "rgba(0, 0, 0, 0.4)", size: 1.4 },
-        
-        // 투명도(0.3)를 확 낮춘 예시
-        { text: "열대식물원", x: 73.0326, y: 70.8883, pos: "top", pinColor: "#000000", bgColor: "rgba(0, 0, 0, 0.3)", size: 1.4 },
-        { text: "곤충생태관", x: 64.2809, y: 64.0457, pos: "top", pinColor: "#000000", bgColor: "rgba(0, 0, 0, 0.3)", size: 1.4 },
-        { text: "종합안내센터", x: 55.5292, y: 58.1806, pos: "top", pinColor: "#000000", bgColor: "rgba(0, 0, 0, 0.3)", size: 1.4 },
-        
-        { text: "한밭수목원 연구동", x: 72.5577, y: 59.6469, pos: "top", pinColor: "#000000", bgColor: "rgba(0, 0, 0, 0.4)", size: 1.4 },
-        { text: "천연기념물센터", x: 88.6364, y: 49.0897, pos: "left", pinColor: "#000000", bgColor: "rgba(0, 0, 0, 0.4)", size: 1.4 },
-        { text: "대전한밭수목원 동원", x: 73.7788, y: 38.1415, pos: "right", pinColor: "#000000", bgColor: "rgba(0, 0, 0, 0.4)", size: 1.4 },
-        { text: "동원 정문", x: 44.5115, y: 34.5242, pos: "top", pinColor: "#000000", bgColor: "rgba(0, 0, 0, 0.4)", size: 1.4 },
-        { text: "대전한반수목원 서원", x: 26.2212, y: 49.0897, pos: "left", pinColor: "#000000", bgColor: "rgba(0, 0, 0, 0.4)", size: 1.4 },
-        { text: "서원 정문", x: 44.5387, y: 34.5242, pos: "bottom", pinColor: "#000000", bgColor: "rgba(0, 0, 0, 0.4)", size: 1.4 },
-
-        // 게이트 (글자 크기 1.3으로 앙증맞게 + 빨간색 계열)
-        { text: "1게이트", x: 70.7938, y: 94.5442, pos: "top", pinColor: "#dc3545", bgColor: "rgba(220, 53, 69, 0.3)", size: 1.3 },
-        { text: "2게이트", x: 52.9512, y: 94.5442, pos: "top", pinColor: "#dc3545", bgColor: "rgba(220, 53, 69, 0.3)", size: 1.3 },
-        { text: "3게이트", x: 45.6242, y: 94.5442, pos: "top", pinColor: "#dc3545", bgColor: "rgba(220, 53, 69, 0.3)", size: 1.3 },
-        { text: "4게이트", x: 27.1031, y: 94.5442, pos: "top", pinColor: "#dc3545", bgColor: "rgba(220, 53, 69, 0.3)", size: 1.3 },
-        { text: "5게이트", x: 3.2225, y: 94.5442, pos: "right", pinColor: "#dc3545", bgColor: "rgba(220, 53, 69, 0.3)", size: 1.3 }, // 구석에 있어 오른쪽으로 배치
-        
-        // 특별 구역 (색상별 매칭 + 오프셋 미세조정 예시)
-        { text: "안내소", x: 80.0000, y: 50.0000, pos: "bottom", offsetY: 0.5, pinColor: "#007bff", bgColor: "rgba(0, 123, 255, 0.4)", size: 1.5 },   
-        { text: "푸드트럭 존", x: 20.0000, y: 40.0000, pos: "right", offsetX: 1.0, pinColor: "#ff9900", bgColor: "rgba(235, 171, 0, 0.4)", size: 1.5 },
-        { text: "안전 휴게소", x: 70.0000, y: 80.0000, pos: "left", pinColor: "#28a745", bgColor: "rgba(40, 167, 69, 0.4)", size: 1.5 }
-    ];
-
     const wrapper = document.getElementById('map-wrapper');
     const isCqiSupported = CSS.supports('container-type', 'inline-size');
     const unit = isCqiSupported ? 'cqi' : 'vw';
 
-    mapLabels.forEach(label => {
-        // 1. 장소 핀 마커 생성 (DOM 분리)
-        if (label.noPin !== true) {
-            const pinIcon = document.createElement('div');
-            pinIcon.className = 'place-pin-icon';
-            pinIcon.style.left = label.x + '%';
-            pinIcon.style.top = label.y + '%';
-            const pColor = label.pinColor || "#000000";
-            // 중앙에 하얀색 원(circle) 추가됨
-            pinIcon.innerHTML = `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" fill="${pColor}" stroke="white" stroke-width="1.5"/><circle cx="12" cy="9.2" r="3.5" fill="#ffffff"/></svg>`;
-            wrapper.appendChild(pinIcon);
-        }
+    // ==========================================
+    // 1️⃣ [핀 + 텍스트] 장소 마커 데이터
+    // ==========================================
+    // * x, y: 핀이 꽂히는 정확한 베이스 좌표
+    // * textOffsetX, textOffsetY: 핀을 기준으로 텍스트를 이동시킬 퍼센트(%) 값
+    //   (예: offsetX: 2, offsetY: -3 이면 핀의 우측 상단 대각선으로 글자가 이동함)
+    
+    const placeMarkers = [
+        // 핀 바로 위로 텍스트 올리기 (offsetY를 -3.5 정도로 설정)
+        { text: "미디어큐브동", x: 49.0417, y: 71.9913, textOffsetX: 0, textOffsetY: -3.5, pinColor: "#000000", bgColor: "rgba(0, 0, 0, 0.4)", size: 1.8 },
+        
+        // 핀 좌측 대각선 위로 텍스트 배치 (offsetX를 -로, offsetY를 -로)
+        { text: "이응노미술관", x: 41.2744, y: 63.4492, textOffsetX: -3, textOffsetY: -2, pinColor: "#000000", bgColor: "rgba(0, 0, 0, 0.4)", size: 1.8 },
+        
+        // 핀 우측 옆으로 텍스트 배치
+        { text: "대전시립미술관", x: 29.6811, y: 62.0907, textOffsetX: 4, textOffsetY: -1.5, pinColor: "#000000", bgColor: "rgba(0, 0, 0, 0.4)", size: 1.8 },
+        
+        { text: "대전예술의전당", x: 12.3813, y: 69.8130, textOffsetX: 0, textOffsetY: -3.5, pinColor: "#000000", bgColor: "rgba(0, 0, 0, 0.4)", size: 1.4 },
+        
+        // 핀 아래로 텍스트 배치 (offsetY를 +로 설정)
+        { text: "대전시립연정국악원", x: 59.2605, y: 75.5804, textOffsetX: 0, textOffsetY: 1.5, pinColor: "#000000", bgColor: "rgba(0, 0, 0, 0.4)", size: 1.4 },
+        
+        // 게이트 (빨간색)
+        { text: "1게이트", x: 70.7938, y: 94.5442, textOffsetX: 0, textOffsetY: -3, pinColor: "#dc3545", bgColor: "rgba(220, 53, 69, 0.3)", size: 1.3 },
+        { text: "2게이트", x: 52.9512, y: 94.5442, textOffsetX: 0, textOffsetY: -3, pinColor: "#dc3545", bgColor: "rgba(220, 53, 69, 0.3)", size: 1.3 },
+        { text: "3게이트", x: 45.6242, y: 94.5442, textOffsetX: 0, textOffsetY: -3, pinColor: "#dc3545", bgColor: "rgba(220, 53, 69, 0.3)", size: 1.3 },
+        { text: "4게이트", x: 27.1031, y: 94.5442, textOffsetX: 0, textOffsetY: -3, pinColor: "#dc3545", bgColor: "rgba(220, 53, 69, 0.3)", size: 1.3 },
+        
+        // 특별 구역
+        { text: "안내소", x: 80.0000, y: 50.0000, textOffsetX: 0, textOffsetY: 1.5, pinColor: "#007bff", bgColor: "rgba(0, 123, 255, 0.4)", size: 1.5 },   
+        { text: "푸드트럭 존", x: 20.0000, y: 40.0000, textOffsetX: 3.5, textOffsetY: -1.5, pinColor: "#ff9900", bgColor: "rgba(235, 171, 0, 0.4)", size: 1.5 },
+        { text: "안전 휴게소", x: 70.0000, y: 80.0000, textOffsetX: -3.5, textOffsetY: -1.5, pinColor: "#28a745", bgColor: "rgba(40, 167, 69, 0.4)", size: 1.5 }
+    ];
 
-        // 2. 텍스트 라벨 생성 (DOM 분리)
+    // ==========================================
+    // 2️⃣ [텍스트 전용] 구역 이름 / 라벨 마커 데이터
+    // ==========================================
+    // * x, y: 텍스트의 중심점 위치
+    // * 핀이 없이 글자만 맵 위에 떠 있습니다. 구역 명칭을 적을 때 유용합니다.
+    
+    const textOnlyMarkers = [
+        { text: "한밭수목원 동원구역", x: 73.7788, y: 38.1415, bgColor: "rgba(0, 0, 0, 0.4)", size: 2.0 },
+        { text: "한밭수목원 서원구역", x: 26.2212, y: 49.0897, bgColor: "rgba(0, 0, 0, 0.4)", size: 2.0 },
+        { text: "평송청소년문화센터 앞뜰", x: 83.0054, y: 80.0770, bgColor: "rgba(0, 0, 0, 0.3)", size: 1.4 }
+    ];
+
+    // --- 핀 마커 생성 렌더링 ---
+    placeMarkers.forEach(label => {
+        // 핀(마커) 아이콘 배치
+        const pinIcon = document.createElement('div');
+        pinIcon.className = 'place-pin-icon';
+        pinIcon.style.left = label.x + '%';
+        pinIcon.style.top = label.y + '%';
+        const pColor = label.pinColor || "#000000";
+        pinIcon.innerHTML = `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" fill="${pColor}" stroke="white" stroke-width="1.5"/><circle cx="12" cy="9.2" r="3.5" fill="#ffffff"/></svg>`;
+        wrapper.appendChild(pinIcon);
+
+        // 연동된 텍스트 라벨 배치 (베이스 x,y 에 오프셋을 더함)
         const labelDiv = document.createElement('div');
         labelDiv.className = 'map-label';
         labelDiv.innerText = label.text;
         labelDiv.style.backgroundColor = label.bgColor || "rgba(0,0,0,0.4)";
+        labelDiv.style.setProperty('--label-size', (label.size || 1.6) + unit);
+
+        // 오프셋 좌표 적용 (퍼센트 단위로 이동)
+        const textX = label.x + (label.textOffsetX || 0);
+        const textY = label.y + (label.textOffsetY || 0);
         
-        // 개별 글자 크기 변수 주입 (기본값 1.6)
-        const fontSize = label.size || 1.6;
-        labelDiv.style.setProperty('--label-size', fontSize + unit);
+        labelDiv.style.left = textX + '%';
+        labelDiv.style.top = textY + '%';
+        wrapper.appendChild(labelDiv);
+    });
 
-        // 글자 위치 동적 계산 로직 (핀을 가리지 않게 자동으로 바깥으로 밀어냄)
-        let tx = label.x;
-        let ty = label.y;
-        let pos = label.pos || 'top';
-        let transformStr = "";
-
-        if (pos === 'bottom') { 
-            ty += 0.5; // 핀 약간 아래
-            transformStr = "translate(-50%, 0%)"; 
-        }
-        else if (pos === 'left') { 
-            tx -= 1.5; // 핀 왼쪽으로 밀어냄
-            ty -= 1.5; // 핀의 중간 높이
-            transformStr = "translate(-100%, -50%)"; // 글자 오른쪽 끝 기준
-        }
-        else if (pos === 'right') { 
-            tx += 1.5; // 핀 오른쪽으로 밀어냄
-            ty -= 1.5; // 핀의 중간 높이
-            transformStr = "translate(0%, -50%)"; // 글자 왼쪽 끝 기준
-        }
-        else { // top
-            ty -= 3.5; // 핀 위로 올림
-            transformStr = "translate(-50%, -100%)"; 
-        }
-
-        // 미세 오차(offsetX, offsetY)가 있다면 퍼센트(%) 단위로 추가 이동
-        tx += (label.offsetX || 0);
-        ty += (label.offsetY || 0);
-
-        labelDiv.style.left = tx + '%';
-        labelDiv.style.top = ty + '%';
-        labelDiv.style.transform = transformStr;
+    // --- 텍스트 전용 마커 렌더링 ---
+    textOnlyMarkers.forEach(label => {
+        const labelDiv = document.createElement('div');
+        labelDiv.className = 'map-label';
+        labelDiv.innerText = label.text;
+        labelDiv.style.backgroundColor = label.bgColor || "rgba(0,0,0,0.4)";
+        labelDiv.style.setProperty('--label-size', (label.size || 1.6) + unit);
+        
+        labelDiv.style.left = label.x + '%';
+        labelDiv.style.top = label.y + '%';
         wrapper.appendChild(labelDiv);
     });
 
     // ==========================================
-    // GPS 위치 추적 로직 (변경 없음)
+    // GPS 위치 추적 로직 (보정값 적용)
     // ==========================================
     const pin = document.getElementById('user-pin');
     const toast = document.getElementById('toast');
