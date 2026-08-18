@@ -186,8 +186,8 @@
         </div>
         <!-- 액션 버튼 그룹 -->
         <div class="menu-row">
-            <a href="https://www.djto.kr/boardFileDown.do?file_idx=16245" class="action-btn link-btn" download onclick="gtag('event', 'map_download_click');">📥 시민광장 안내</a>
-            <a href="https://daejeontour.co.kr/bbs/board.php?bo_table=guide_book_djt&sca=%EA%B5%AD%EB%AC%B8" class="action-btn link-btn tour" target="_blank" onclick="gtag('event', 'tour_link_click');">🌍 대전관광</a>
+            <a href="https://www.djto.kr/boardFileDown.do?file_idx=16245" id="plaza-guide-btn" class="action-btn link-btn" download onclick="gtag('event', 'map_download_click');">📥 시민광장 안내</a>
+            <a href="https://daejeontour.co.kr/bbs/board.php?bo_table=guide_book_djt&sca=%EA%B5%AD%EB%AC%B8" id="tour-link-btn" class="action-btn link-btn tour" target="_blank" onclick="gtag('event', 'tour_link_click');">🌍 대전관광 홈페이지</a>
         </div>
     </div>
     <!-- 메뉴 숨기기 토글 버튼 -->
@@ -236,6 +236,21 @@
         en: "📱 Rotate your phone horizontally for a larger view.<br><span class='sub-notice'>※ Enable GPS for location tracking; otherwise, it will display as a standard map.</span>",
         ja: "📱 スマホを横にすると大きく表示されます。<br><span class='sub-notice'>※ GPSをオンにすると現在地が表示されます。オフの場合は通常の案内図になります。</span>",
         zh: "📱 请横向持握手机以获得更大的视图。<br><span class='sub-notice'>※ 请开启GPS以显示当前位置，否则仅显示为普通地图。</span>"
+    };
+
+    // 상단 액션 버튼 텍스트 및 대전관광 링크 다국어 데이터
+    const actionBtnTexts = {
+        ko: { plaza: "📥 시민광장 안내", tour: "🌍 대전관광 홈페이지" },
+        en: { plaza: "📥 Citizens' Plaza Guide", tour: "🌍 Daejeon Tourism Homepage" },
+        ja: { plaza: "📥 市民広場案内", tour: "🌍 大田観光ホームページ" },
+        zh: { plaza: "📥 市民广场指南", tour: "🌍 大田旅游主页" }
+    };
+
+    const tourLinks = {
+        ko: "https://daejeontour.co.kr/bbs/board.php?bo_table=guide_book_djt&sca=%EA%B5%AD%EB%AC%B8", // 국문
+        en: "https://daejeontour.co.kr/bbs/board.php?bo_table=guide_book_djt&sca=English", // 영문
+        ja: "https://daejeontour.co.kr/bbs/board.php?bo_table=guide_book_djt&sca=%E6%97%A5%E6%9C%AC%E8%AA%9E", // 日本語 (URL 인코딩)
+        zh: "https://daejeontour.co.kr/bbs/board.php?bo_table=guide_book_djt&sca=%E4%B8%AD%E6%96%87" // 中文 (URL 인코딩)
     };
 
     // 마커 데이터
@@ -342,6 +357,18 @@
         const introText = document.getElementById('intro-text');
         if (introText && popupTexts[lang]) {
             introText.innerHTML = popupTexts[lang];
+        }
+
+        // 💡 액션 버튼 언어 및 링크 업데이트 로직
+        const plazaGuideBtn = document.getElementById('plaza-guide-btn');
+        const tourLinkBtn = document.getElementById('tour-link-btn');
+
+        if (plazaGuideBtn && actionBtnTexts[lang]) {
+            plazaGuideBtn.innerHTML = actionBtnTexts[lang].plaza;
+        }
+        if (tourLinkBtn && actionBtnTexts[lang]) {
+            tourLinkBtn.innerHTML = actionBtnTexts[lang].tour;
+            tourLinkBtn.href = tourLinks[lang];
         }
 
         const langNames = { ko: '한국어', en: 'English', ja: '日本語', zh: '中國語' };
